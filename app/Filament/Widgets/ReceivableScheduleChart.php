@@ -11,7 +11,7 @@ use Filament\Widgets\ChartWidget;
  */
 class ReceivableScheduleChart extends ChartWidget
 {
-    protected static ?int $sort = 4;
+    protected static ?int $sort = 5;
 
     protected ?string $heading = '應收時程（含稅）';
 

@@ -276,7 +276,7 @@ class MetricDefinitionSeeder extends Seeder
                 'better' => MetricDirection::Down,
                 'is_pinned' => true,
                 'warn_threshold' => 20,
-                'description' => '狀態為「驗證中」但指派給文豪以外的人的未結案議題數。這些議題脫離了正常驗收流程，通常已經停滯。> 20 為警告。可拆 `project:<identifier>`。參考值（W36）：58。',
+                'description' => '狀態為「驗證中」但指派給文豪以外的人的未結案議題數（未指派的驗證中不計入）。這些議題脫離了正常驗收流程，通常已經停滯。> 20 為警告。可拆 `project:<identifier>`。參考值（W36）：61（週報的 58 只算裕樺 30＋妤欣 28，另有鈺文 2、永彬 1）。',
             ],
             [
                 'key' => 'delivery.advanced_to_verify',
@@ -348,7 +348,7 @@ class MetricDefinitionSeeder extends Seeder
                 'unit' => MetricUnit::Ratio,
                 'period_type' => PeriodType::Week,
                 'better' => MetricDirection::Down,
-                'description' => '該週新增議題中，建立時就指派給文豪的比例，以 0–1 小數儲存（0.8 = 80%）。單點瓶頸指標：越高代表越依賴文豪一人。參考值（W36）：0.8。',
+                'description' => '該週新增議題中，目前指派給文豪的比例，以 0–1 小數儲存（0.8 = 80%）。單點瓶頸指標：越高代表越依賴文豪一人。參考值（W36）：0.8。',
             ],
 
             // 公司 company

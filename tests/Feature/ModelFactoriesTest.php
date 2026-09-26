@@ -9,6 +9,11 @@ use App\Models\Insight;
 use App\Models\MetricValue;
 use App\Models\Project;
 use App\Models\Receivable;
+use App\Models\RedmineIssue;
+use App\Models\RedmineStatusChange;
+use App\Models\RedmineStatusSnapshot;
+use App\Models\RedmineTimeEntry;
+use App\Models\SyncRun;
 
 test('every factory persists a valid record', function (string $model) {
     expect($model::factory()->create()->exists)->toBeTrue();
@@ -36,4 +41,22 @@ test('an outstanding receivable past its expected date is overdue', function () 
 
     expect(Receivable::overdue()->count())->toBe(1)
         ->and(Receivable::overdue()->sole()->is_overdue)->toBeTrue();
+});
+
+test('every redmine factory persists a valid record', function (string $model) {
+    expect($model::factory()->create()->exists)->toBeTrue();
+})->with([
+    RedmineIssue::class,
+    RedmineTimeEntry::class,
+    RedmineStatusSnapshot::class,
+    RedmineStatusChange::class,
+    SyncRun::class,
+]);
+
+test('the acceptor is matched by the start of the display name', function () {
+    config(['services.redmine.acceptor_name' => '文豪']);
+
+    expect(RedmineIssue::isAcceptor('文豪 王'))->toBeTrue()
+        ->and(RedmineIssue::isAcceptor('裕樺 李'))->toBeFalse()
+        ->and(RedmineIssue::isAcceptor(null))->toBeFalse();
 });

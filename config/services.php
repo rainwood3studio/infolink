@@ -18,6 +18,17 @@ return [
         'key' => env('POSTMARK_API_KEY'),
     ],
 
+    'redmine' => [
+        'url' => env('REDMINE_URL'),
+        'key' => env('REDMINE_API_KEY'),
+        'timeout' => (int) env('REDMINE_TIMEOUT', 15),
+        /*
+         * The single person who does final acceptance (驗收) on every issue. Matched against the start of the
+         * assignee's display name (Redmine shows "名 姓"), so "驗證中" can be split into their queue vs. everyone else.
+         */
+        'acceptor_name' => env('REDMINE_ACCEPTOR_NAME', '文豪'),
+    ],
+
     'resend' => [
         'key' => env('RESEND_API_KEY'),
     ],
