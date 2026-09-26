@@ -1,0 +1,100 @@
+name: infolink
+
+x-php: &php
+  image: serversideup/php:8.5-fpm-nginx
+  restart: unless-stopped
+  env_file: .env
+  environment: &php-env
+    PHP_OPCACHE_ENABLE: "0"
+    AUTORUN_ENABLED: "false"
+  volumes:
+    - ./:/var/www/html
+    - "${VAULT_PATH}:/vault:ro"
+  depends_on:
+    db:
+      condition: service_healthy
+
+services:
+  app:
+    <<: *php
+    ports:
+      - "127.0.0.1:8080:8080"
+    environment:
+      <<: *php-env
+      AUTORUN_ENABLED: "true"
+      AUTORUN_LARAVEL_MIGRATION: "true"
+      AUTORUN_LARAVEL_STORAGE_LINK: "true"
+      # dev: never cache config/routes/views/events (code changes must apply immediately)
+      AUTORUN_LARAVEL_OPTIMIZE: "false"
+      AUTORUN_LARAVEL_CONFIG_CACHE: "false"
+      AUTORUN_LARAVEL_ROUTE_CACHE: "false"
+      AUTORUN_LARAVEL_VIEW_CACHE: "false"
+      AUTORUN_LARAVEL_EVENT_CACHE: "false"
+
+  scheduler:
+    <<: *php
+    command: ["php", "/var/www/html/artisan", "schedule:work"]
+    stop_signal: SIGTERM
+    healthcheck:
+      test: ["CMD", "healthcheck-schedule"]
+      start_period: 10s
+
+  queue:
+    <<: *php
+    command: ["php", "/var/www/html/artisan", "queue:work", "--tries=3"]
+    stop_signal: SIGTERM
+    healthcheck:
+      test: ["CMD", "healthcheck-queue"]
+      start_period: 10s
+
+  db:
+    image: postgres:17
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_DATABASE}
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      TZ: Asia/Taipei
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\""]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # Daily pg_dump (custom format) into ${BACKUP_PATH}; keeps 30 days.
+  # Dumps once ~60s after start, then every 24h.
+  backup:
+    image: postgres:17
+    restart: unless-stopped
+    environment:
+      PGHOST: db
+      PGDATABASE: ${DB_DATABASE}
+      PGUSER: ${DB_USERNAME}
+      PGPASSWORD: ${DB_PASSWORD}
+      TZ: Asia/Taipei
+    volumes:
+      - "${BACKUP_PATH:-~/Backups/infolink}:/backups"
+    depends_on:
+      db:
+        condition: service_healthy
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        sleep 60  # let app finish autorun migrations before first dump
+        while true; do
+          f="/backups/infolink-$$(date +%Y%m%d-%H%M%S).dump"
+          if pg_dump -Fc -f "$$f.tmp"; then
+            mv "$$f.tmp" "$$f" && echo "backup ok: $$f"
+          else
+            rm -f "$$f.tmp"; echo "backup FAILED" >&2
+          fi
+          find /backups -name 'infolink-*.dump' -mtime +30 -delete
+          sleep 86400
+        done
+
+volumes:
+  pgdata:
