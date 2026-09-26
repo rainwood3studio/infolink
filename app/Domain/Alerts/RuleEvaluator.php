@@ -5,6 +5,7 @@ namespace App\Domain\Alerts;
 use App\Domain\Alerts\Rules\BriefMissingRule;
 use App\Domain\Alerts\Rules\CashLowRule;
 use App\Domain\Alerts\Rules\ClosingRiskRule;
+use App\Domain\Alerts\Rules\DealStaleRule;
 use App\Domain\Alerts\Rules\DeliveryBacklogGrowingRule;
 use App\Domain\Alerts\Rules\MetricThresholdRule;
 use App\Domain\Alerts\Rules\ReceivableDueRule;
@@ -51,6 +52,7 @@ class RuleEvaluator
         VatReserveRule::class,
         DeliveryBacklogGrowingRule::class,
         ClosingRiskRule::class,
+        DealStaleRule::class,
         SyncFailedRule::class,
         BriefMissingRule::class,
     ];

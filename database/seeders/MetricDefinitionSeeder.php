@@ -73,7 +73,7 @@ class MetricDefinitionSeeder extends Seeder
                 'unit' => MetricUnit::Twd,
                 'period_type' => PeriodType::Month,
                 'better' => MetricDirection::Down,
-                'description' => '當月銀行支出加總，扣除標記 is_one_off 的一次性支出（例如中秋獎金）與代墊款（category = reimbursement）。period_start 為該月 1 日。參考值：229,666。',
+                'description' => '當月（period_start 為該月 1 日）所有帳戶 bank_transactions.withdrawal 加總，排除 is_one_off = true 的一次性支出（例如中秋獎金、禮盒）與代墊款（category = reimbursement）。現金基礎：以實際扣款日歸月，遲繳（例如 7 月勞健保 8/03 補繳）或雙月營業稅會讓單月偏高或偏低；要看常態水準請用 cost_baselines（目前 229,666）。只記錄有逐筆交易的月份；資料尚未涵蓋到月底的當月會在 notes 標示 partial month，數字會再變。',
             ],
             [
                 'key' => 'cash.forecast_min_90d',
@@ -94,6 +94,24 @@ class MetricDefinitionSeeder extends Seeder
                 'period_type' => PeriodType::Snapshot,
                 'better' => MetricDirection::Up,
                 'description' => '最新一版 cash_forecasts 的年底（12 月底）推估餘額，假設與該版推估相同（預設只計高確定性應收）。比較不同觀測日的值可看推估的變化。參考值：2,128,778。',
+            ],
+            [
+                'key' => 'cash.forecast_error',
+                'name' => '上月推估月底餘額誤差',
+                'category' => Category::Finance,
+                'unit' => MetricUnit::Twd,
+                'period_type' => PeriodType::Month,
+                'better' => MetricDirection::None,
+                'description' => '推估準確度：該月（M，period_start 為 M 的 1 日）實際月底餘額 − 上個月推估的 M 月底餘額，新台幣元。推估取 as_of 落在 M−1 月內的最新一版 cash_forecasts（同日多版取最後建立者），讀其 rows 中 month = M 的 balance；實際為各帳戶在 M 月底當天或之前最後一筆交易 balance 的加總。只在 M 已完整匯入（存在 M 月底之後的交易）且該推估有 M 月的列時才記錄。正數 = 實際比推估好（多收或少花），負數 = 推估太樂觀。notes 記錄所用推估的 id、as_of、推估值與實際值。12 月的推估預設只算到年底，因此 1 月通常沒有值。',
+            ],
+            [
+                'key' => 'cash.forecast_error_ratio',
+                'name' => '上月推估誤差率',
+                'category' => Category::Finance,
+                'unit' => MetricUnit::Ratio,
+                'period_type' => PeriodType::Month,
+                'better' => MetricDirection::None,
+                'description' => 'cash.forecast_error ÷ |推估的 M 月底餘額|，以小數儲存（0.05 = 實際比推估高 5%，−0.1 = 低 10%），四捨五入到小數 4 位。配對規則與 cash.forecast_error 相同；推估值為 0 時不記錄。看絕對值大小判斷推估是否可靠。',
             ],
             [
                 'key' => 'ar.outstanding_taxed',
@@ -131,7 +149,7 @@ class MetricDefinitionSeeder extends Seeder
                 'unit' => MetricUnit::Twd,
                 'period_type' => PeriodType::Month,
                 'better' => MetricDirection::Up,
-                'description' => '當月 bank_transactions 中 category = revenue 的存入金額加總（含稅，即實際入帳金額）。是現金基礎，不是發票或權責基礎的營收。',
+                'description' => '當月（period_start 為該月 1 日）所有帳戶 bank_transactions 中 category = revenue 的 deposit 加總（含稅，即實際入帳金額，匯費已被扣掉）。是現金基礎，不是發票或權責基礎的營收。只記錄有逐筆交易的月份；未涵蓋到月底的當月在 notes 標示 partial month。',
             ],
             [
                 'key' => 'revenue.recurring_monthly',
@@ -140,7 +158,7 @@ class MetricDefinitionSeeder extends Seeder
                 'unit' => MetricUnit::Twd,
                 'period_type' => PeriodType::Month,
                 'better' => MetricDirection::Up,
-                'description' => 'is_recurring 應收（維運費等每月固定款，例如墊腳石維運、我識 APP 維護）的每月金額加總。代表每月可預期的收入底。參考值：約 120,000。',
+                'description' => 'receivables 中 is_recurring = true、expected_on 落在該月、狀態不是 cancelled（已收或未收都算）的 amount_taxed 加總（含稅）。代表每月可預期的收入底（例如墊腳石維運 100,000＋我識 APP 維護 20,000）。該月沒有任何經常性應收紀錄時不寫值（不是 0）——例如 2026-07、08 的維運費沒有建成應收。參考值：約 120,000。',
             ],
             [
                 'key' => 'cost.personnel_ratio',
@@ -149,7 +167,7 @@ class MetricDefinitionSeeder extends Seeder
                 'unit' => MetricUnit::Ratio,
                 'period_type' => PeriodType::Month,
                 'better' => MetricDirection::None,
-                'description' => '（薪資＋勞健保＋勞退）÷ 常態支出（排除一次性支出與代墊）。以 0–1 小數儲存（0.85 = 85%）。參考值：0.85。',
+                'description' => '當月 category ∈ {salary, insurance} 的常態支出（排除 is_one_off）÷ 同月 cash.monthly_cost（常態支出，排除一次性與代墊）。勞退（勞工退休金）與勞保、健保都歸在 insurance 類別裡。以 0–1 小數儲存（0.85 = 85%），四捨五入到小數 4 位。現金基礎，單月會受遲繳、營業稅繳款月份影響（例如 8 月沒有營業稅與 AWS 支出，比例接近 1）；看趨勢時以多個月平均為準。參考值：0.85。',
             ],
             [
                 'key' => 'tax.vat_reserve',
@@ -167,7 +185,7 @@ class MetricDefinitionSeeder extends Seeder
                 'unit' => MetricUnit::Twd,
                 'period_type' => PeriodType::Month,
                 'better' => MetricDirection::Up,
-                'description' => '今年 1 月 1 日到該月底的銀行存入減提出累計。是年度目標「開始獲利」的代理指標（現金基礎，非會計損益）。period_start 為該月 1 日。',
+                'description' => '當年 1 月 1 日到該月底，所有帳戶 deposit − withdrawal 的累計（所有類別都算，包含代墊與一次性支出，所以等於「月底餘額 − 去年底餘額」）。是年度目標「開始獲利」的代理指標（現金基礎，非會計損益）。period_start 為該月 1 日。計算方式為上月值＋本月淨額：1 月直接等於 1 月淨額；其他月份需要上月已有值，否則不寫。逐筆交易開始前的月份（2026-01～06）來自 vault《帳戶流水分析》月彙總（source = vault），並已核對 6 月底餘額與逐筆交易的期初餘額一致。',
             ],
 
             // 業務 sales

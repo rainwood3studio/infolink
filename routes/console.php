@@ -10,6 +10,7 @@ Artisan::command('inspire', function () {
 })->purpose('Display an inspiring quote');
 
 Schedule::command('infolink:snapshot-finance')->dailyAt('07:00');
+Schedule::command('infolink:snapshot-sales')->dailyAt('07:05');
 Schedule::call(fn () => app(InsightService::class)->expireStale())->name('infolink:expire-insights')->hourly();
 Schedule::command('infolink:sync-redmine')->weekdays()->hourly()->between('08:00', '20:00')->withoutOverlapping();
 Schedule::command('infolink:sync-redmine --full')->sundays()->at('03:00')->withoutOverlapping();

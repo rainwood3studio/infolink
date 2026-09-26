@@ -116,7 +116,7 @@ test('inactive rules are skipped', function () {
     $result = $this->evaluator->evaluate();
 
     expect(Insight::count())->toBe(0)
-        ->and(collect($result->outcomes)->pluck('key'))->not->toContain('receivable-overdue')->not->toContain('deal-stale');
+        ->and(collect($result->outcomes)->pluck('key'))->not->toContain('receivable-overdue');
 });
 
 test('each evaluation is recorded as a rules sync run with stats', function () {
@@ -180,6 +180,8 @@ test('the command prints firings and supports --rule and --dry-run', function ()
 });
 
 test('the command rejects an unknown or inactive rule', function (string $key) {
+    AlertRule::query()->where('key', 'deal-stale')->update(['is_active' => false]);
+
     $this->artisan('infolink:evaluate-rules', ['--rule' => $key])->assertFailed();
 })->with(['nope', 'deal-stale']);
 

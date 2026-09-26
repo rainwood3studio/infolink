@@ -5,6 +5,8 @@ use App\Models\ActionItem;
 use App\Models\BankTransaction;
 use App\Models\CashForecast;
 use App\Models\CostBaseline;
+use App\Models\Deal;
+use App\Models\DealEvent;
 use App\Models\Insight;
 use App\Models\MetricValue;
 use App\Models\Project;
@@ -26,6 +28,8 @@ test('every factory persists a valid record', function (string $model) {
     CashForecast::class,
     ActionItem::class,
     Insight::class,
+    Deal::class,
+    DealEvent::class,
 ]);
 
 test('the taxed amount is derived from the untaxed amount and tax rate', function () {
@@ -59,4 +63,11 @@ test('the acceptor is matched by the start of the display name', function () {
     expect(RedmineIssue::isAcceptor('文豪 王'))->toBeTrue()
         ->and(RedmineIssue::isAcceptor('裕樺 李'))->toBeFalse()
         ->and(RedmineIssue::isAcceptor(null))->toBeFalse();
+});
+
+test('a deal is weighted by its probability and named by customer or prospect', function () {
+    $deal = Deal::factory()->create(['amount_untaxed' => 1_000_000, 'probability' => 30, 'prospect_name' => '多羅滿賞鯨']);
+
+    expect($deal->weighted_amount)->toBe(300_000)
+        ->and($deal->party_name)->toBe('多羅滿賞鯨');
 });

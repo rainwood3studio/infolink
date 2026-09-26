@@ -27,5 +27,16 @@ class DatabaseSeeder extends Seeder
         }
 
         $this->call(FinanceDataSeeder::class);
+
+        if (! DealSeeder::dataIsAvailable()) {
+            $message = 'Skipping DealSeeder: '.DealSeeder::dataPath().' does not exist (the vault sales data is gitignored).';
+
+            Log::warning($message);
+            $this->command?->warn($message);
+
+            return;
+        }
+
+        $this->call(DealSeeder::class);
     }
 }

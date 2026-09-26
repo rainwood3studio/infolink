@@ -5,6 +5,7 @@ namespace App\Mcp\Tools;
 use App\Domain\Delivery\DeliverySummary;
 use App\Domain\Finance\FinancePosition;
 use App\Domain\Metrics\MetricRecorder;
+use App\Domain\Sales\DealService;
 use App\Domain\Work\ActionItemService;
 use App\Domain\Work\AttentionItem;
 use App\Enums\InsightSeverity;
@@ -13,6 +14,7 @@ use App\Enums\ReportType;
 use App\Enums\SyncJob;
 use App\Mcp\Tools\Concerns\PresentsRecords;
 use App\Models\BankTransaction;
+use App\Models\Deal;
 use App\Models\Insight;
 use App\Models\MetricDefinition;
 use App\Models\Project;
@@ -36,6 +38,7 @@ START HERE. The whole company picture in one call; use the other tools only to d
 - `metrics_over_threshold`: every metric (pinned or not) whose latest total is warn or critical, with its thresholds.
 - `finance` (null until bank data exists): `balance` (latest bank balance), `monthly_cost` (recurring monthly cost baseline), `runway_months` (balance ÷ monthly_cost, ignoring receivables), `ar_outstanding_taxed` (high-confidence, non-recurring, tax-inclusive), `ar_low_confidence_taxed`, `ar_overdue_taxed`, `forecast_year_end` and `forecast_min_90d` (lowest forecast month-end balance in the next 90 days; the forecast only counts high-confidence receivables). Details: get_cash_position.
 - `delivery`: Redmine mirror stock — open, by_status, verifying split (acceptor = 文豪's normal acceptance queue; others = 驗證中 assigned to someone else, i.e. off the acceptance flow; unassigned), stalled_30d/90d, overdue, unassigned, and `top_projects` (5 largest by open issues). All acceptance is done by 文豪, so closed counts are not team throughput. Details: redmine_summary.
+- `sales`: the open pipeline — `open_count`, `amount_total` and `weighted_total` (untaxed; weighted = amount × probability), `by_stage` (lead/proposal/negotiation: count, amount, weighted) and `no_next_action` (open deals whose next action is missing or past: id, party, title, stage, weighted_amount, next_action, next_action_on). Details: list_deals.
 - `attention`: the 「今天要處理」 list in order — unresolved critical then warning insights (`type` insight, `id`, `fingerprint`, `severity`), then pending action items due today or overdue (`type` action_item, `id`, `priority`, `due_on`, `days_overdue`).
 - `open_insights_by_severity`: counts of unresolved insights (open + acknowledged) per severity, including info.
 - `overdue_receivables` and `upcoming_receivables` (expected in the next 30 days): outstanding receivables incl. recurring fees (`is_recurring`), with `untaxed`/`taxed` amounts, `confidence` and `days_overdue`.
@@ -57,6 +60,7 @@ class GetBriefing extends ReadTool
         FinancePosition $financePosition,
         DeliverySummary $deliverySummary,
         ActionItemService $actionItems,
+        DealService $deals,
     ): Response {
         if ($denied = $this->forbidden($request)) {
             return $denied;
@@ -82,6 +86,7 @@ class GetBriefing extends ReadTool
                 ->all(),
             'finance' => $this->finance($financePosition),
             'delivery' => $this->delivery($deliverySummary),
+            'sales' => $this->sales($deals),
             'attention' => $actionItems->attentionList()->map(fn (AttentionItem $item): array => $this->attentionItem($item))->all(),
             'open_insights_by_severity' => $this->insightCounts(),
             'overdue_receivables' => $this->receivables(Receivable::query()->overdue()),
@@ -173,6 +178,27 @@ class GetBriefing extends ReadTool
         return [
             ...array_diff_key($current, ['projects' => true]),
             'top_projects' => array_slice($current['projects'], 0, self::TOP_PROJECTS),
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    protected function sales(DealService $deals): array
+    {
+        $pipeline = $deals->pipeline();
+
+        return [
+            ...array_diff_key($pipeline, ['no_next_action' => true]),
+            'no_next_action' => $pipeline['no_next_action']->map(fn (Deal $deal): array => [
+                'id' => $deal->id,
+                'party' => $deal->party_name,
+                'title' => $deal->title,
+                'stage' => $deal->stage->value,
+                'weighted_amount' => $deal->weighted_amount,
+                'next_action' => $deal->next_action,
+                'next_action_on' => static::date($deal->next_action_on),
+            ])->all(),
         ];
     }
 

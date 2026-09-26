@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use App\Domain\Alerts\Rules\BriefMissingRule;
 use App\Domain\Alerts\Rules\CashLowRule;
 use App\Domain\Alerts\Rules\ClosingRiskRule;
+use App\Domain\Alerts\Rules\DealStaleRule;
 use App\Domain\Alerts\Rules\DeliveryBacklogGrowingRule;
 use App\Domain\Alerts\Rules\ReceivableDueRule;
 use App\Domain\Alerts\Rules\ReceivableOverdueRule;
@@ -20,9 +21,6 @@ use Illuminate\Database\Seeder;
  *
  * Idempotent by `key` and create-only: an existing rule is never touched, so thresholds, severity, templates and
  * `is_active` edited in the admin survive re-seeding (template improvements here therefore only reach new installs).
- *
- * 業務斷層 (deal-stale) is seeded INACTIVE: it needs the deals tables (Phase 5). Until then it is only a metric rule
- * on `sales.deals_no_next_action` > 0 without the "persists 7 days" condition or per-deal fingerprints.
  */
 class AlertRuleSeeder extends Seeder
 {
@@ -179,15 +177,14 @@ class AlertRuleSeeder extends Seeder
             [
                 'key' => 'deal-stale',
                 'name' => '業務斷層',
-                'description' => '尚未啟用：需要 Phase 5 的 deals 資料表（每筆機會 deal-stale:<id>、持續 7 天）。目前只能對 sales.deals_no_next_action > 0 做整體判斷。',
-                'metric_key' => 'sales.deals_no_next_action',
-                'operator' => '>',
-                'threshold' => 0,
+                'description' => '進行中的業務機會沒有下一步（next_action_on 為空，以最後更新日起算）或下一步已逾期，持續門檻天數以上；每筆機會一則 deal-stale:<id>。設定未來的下一步或結案後自動解除。',
+                'query_class' => DealStaleRule::class,
+                'operator' => '>=',
+                'threshold' => 7,
                 'severity' => InsightSeverity::Info,
                 'category' => Category::Sales,
-                'title_template' => '{value} 筆業務機會沒有下一步',
-                'fingerprint_template' => 'deal-stale',
-                'is_active' => false,
+                'title_template' => '{label}{reason}',
+                'fingerprint_template' => 'deal-stale:{id}',
             ],
             [
                 'key' => 'sync-failed',

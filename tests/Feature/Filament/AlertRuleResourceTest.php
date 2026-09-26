@@ -102,6 +102,7 @@ it('evaluates a rule immediately from the row action', function () {
 
 it('hides 立即評估 for inactive rules', function () {
     $rule = AlertRule::where('key', 'deal-stale')->sole();
+    $rule->update(['is_active' => false]);
 
     Livewire::test(ListAlertRules::class)
         ->assertActionHidden(TestAction::make('evaluateNow')->table($rule));
