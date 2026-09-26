@@ -14,3 +14,5 @@ Schedule::call(fn () => app(InsightService::class)->expireStale())->name('infoli
 Schedule::command('infolink:sync-redmine')->weekdays()->hourly()->between('08:00', '20:00')->withoutOverlapping();
 Schedule::command('infolink:sync-redmine --full')->sundays()->at('03:00')->withoutOverlapping();
 Schedule::command('infolink:snapshot-redmine')->dailyAt('23:50')->withoutOverlapping();
+Schedule::command('infolink:flush-notifications')->everyFiveMinutes()->withoutOverlapping();
+Schedule::command('infolink:evaluate-rules')->hourly()->withoutOverlapping();

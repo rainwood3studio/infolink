@@ -285,7 +285,7 @@ class MetricDefinitionSeeder extends Seeder
                 'unit' => MetricUnit::Count,
                 'period_type' => PeriodType::Week,
                 'better' => MetricDirection::Up,
-                'description' => '該週狀態變更為「驗證中」的議題數。這才是真正的團隊產能指標（開發完成交付驗收）。dimension `assignee:<姓名>` 為依推進者拆分。',
+                'description' => '該週狀態變更為「驗證中」的議題數。這才是真正的團隊產能指標（開發完成交付驗收）。dimension `assignee:<姓名>` 為依推進者拆分。資料來源是同步時觀察到的狀態變化，從 2026-09-26 第一次同步才開始記錄：之前的週沒有資料（不是 0），開始記錄的那一週只有部分天數。',
             ],
             [
                 'key' => 'delivery.wenhao_throughput',

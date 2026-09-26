@@ -32,5 +32,7 @@
         <env name="PULSE_ENABLED" value="false" force="true"/>
         <env name="TELESCOPE_ENABLED" value="false" force="true"/>
         <env name="NIGHTWATCH_ENABLED" value="false" force="true"/>
+        <env name="LINE_CHANNEL_ACCESS_TOKEN" value="" force="true"/>
+        <env name="LINE_USER_ID" value="" force="true"/>
     </php>
 </phpunit>

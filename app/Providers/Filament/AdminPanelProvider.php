@@ -29,6 +29,8 @@ class AdminPanelProvider extends PanelProvider
             ->id('admin')
             ->path('admin')
             ->login()
+            ->databaseNotifications()
+            ->databaseNotificationsPolling('60s')
             ->brandName('INFOLINK')
             ->colors([
                 'primary' => Color::Blue,

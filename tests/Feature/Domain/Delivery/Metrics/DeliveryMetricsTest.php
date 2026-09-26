@@ -5,6 +5,7 @@ use App\Models\MetricValue;
 use App\Models\RedmineIssue;
 use App\Models\RedmineStatusChange;
 use App\Models\RedmineTimeEntry;
+use App\Models\SyncRun;
 use Carbon\CarbonImmutable;
 use Database\Seeders\MetricDefinitionSeeder;
 
@@ -13,6 +14,8 @@ beforeEach(function () {
     $this->seed(MetricDefinitionSeeder::class);
     $this->travelTo(CarbonImmutable::parse('2026-09-07 10:00')); // Monday after W36
     $this->metrics = app(DeliveryMetrics::class);
+    // Status changes are only tracked from the first successful issue sync; fixtures are in W36 (2026-08-31).
+    SyncRun::factory()->create(['started_at' => '2026-08-01 00:00']);
 });
 
 function metricValue(string $key, string $period, string $dimension = ''): ?float
@@ -167,4 +170,16 @@ test('recordDaily is idempotent and zeroes project dimensions that disappeared',
     expect(metricValue('delivery.open', '2026-09-07'))->toBe(1.0)
         ->and(metricValue('delivery.open', '2026-09-07', 'project:gone'))->toBe(0.0)
         ->and(MetricValue::where('metric_key', 'delivery.open')->count())->toBe(3);
+});
+
+test('weeks that ended before status tracking began have no advanced-to-verify data', function () {
+    SyncRun::query()->delete();
+    SyncRun::factory()->create(['started_at' => '2026-09-26 13:00']);
+
+    expect($this->metrics->weekStats(CarbonImmutable::parse('2026-09-14'))['advanced_to_verify'])->toBeNull()
+        ->and($this->metrics->weekStats(CarbonImmutable::parse('2026-09-21'))['advanced_to_verify'])->toBe(0);
+
+    $this->metrics->recordWeekly(CarbonImmutable::parse('2026-09-14'));
+
+    expect(MetricValue::where('metric_key', 'delivery.advanced_to_verify')->exists())->toBeFalse();
 });

@@ -29,6 +29,14 @@ return [
         'acceptor_name' => env('REDMINE_ACCEPTOR_NAME', '文豪'),
     ],
 
+    'line' => [
+        /*
+         * LINE Official Account + Messaging API (LINE Notify was discontinued in 2025-03). Push goes to one user.
+         */
+        'channel_access_token' => env('LINE_CHANNEL_ACCESS_TOKEN'),
+        'user_id' => env('LINE_USER_ID'),
+    ],
+
     'resend' => [
         'key' => env('RESEND_API_KEY'),
     ],

@@ -15,6 +15,7 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         $this->call(MetricDefinitionSeeder::class);
+        $this->call(AlertRuleSeeder::class);
 
         if (! FinanceDataSeeder::dataIsAvailable()) {
             $message = 'Skipping FinanceDataSeeder: '.FinanceDataSeeder::dataPath().' does not exist (the real finance data is gitignored).';

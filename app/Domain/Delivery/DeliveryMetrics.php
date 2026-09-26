@@ -4,10 +4,13 @@ namespace App\Domain\Delivery;
 
 use App\Domain\Metrics\MetricRecorder;
 use App\Enums\Source;
+use App\Enums\SyncJob;
+use App\Enums\SyncStatus;
 use App\Models\MetricValue;
 use App\Models\RedmineIssue;
 use App\Models\RedmineStatusChange;
 use App\Models\RedmineTimeEntry;
+use App\Models\SyncRun;
 use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Collection;
@@ -67,7 +70,9 @@ class DeliveryMetrics
             $this->recorder->record('delivery.net_flow', $stats['net_flow'], $monday);
             $this->recorder->record('delivery.wenhao_throughput', $stats['wenhao_throughput'], $monday);
 
-            $this->recordWithDimensions('delivery.advanced_to_verify', $stats['advanced_to_verify'], $this->prefixed('assignee', $stats['advanced_to_verify_by_assignee']), $monday);
+            if ($stats['advanced_to_verify'] !== null) {
+                $this->recordWithDimensions('delivery.advanced_to_verify', $stats['advanced_to_verify'], $this->prefixed('assignee', $stats['advanced_to_verify_by_assignee']), $monday);
+            }
             $this->recordWithDimensions('delivery.hours_logged', $stats['hours_logged'], $this->prefixed('user', $stats['hours_by_user']), $monday);
 
             if ($stats['inflow_to_wenhao_ratio'] !== null) {
@@ -86,7 +91,7 @@ class DeliveryMetrics
      * - hours_logged: time entries by spent_on.
      * - inflow_to_wenhao_ratio: share of the week's new issues currently assigned to the acceptor (null if none created).
      *
-     * @return array{week_start: string, week_end: string, created: int, closed: int, net_flow: int, created_by_project: array<string, int>, closed_by_project: array<string, int>, wenhao_throughput: int, advanced_to_verify: int, advanced_to_verify_by_assignee: array<string, int>, hours_logged: float, hours_by_user: array<string, float>, created_assigned_to_acceptor: int, inflow_to_wenhao_ratio: ?float}
+     * @return array{week_start: string, week_end: string, created: int, closed: int, net_flow: int, created_by_project: array<string, int>, closed_by_project: array<string, int>, wenhao_throughput: int, advanced_to_verify: ?int, advanced_to_verify_by_assignee: array<string, int>, hours_logged: float, hours_by_user: array<string, float>, created_assigned_to_acceptor: int, inflow_to_wenhao_ratio: ?float}
      */
     public function weekStats(CarbonInterface $weekStart): array
     {
@@ -128,7 +133,7 @@ class DeliveryMetrics
             'created_by_project' => $this->countsDesc($created->countBy('project_identifier')),
             'closed_by_project' => $this->countsDesc($closed->countBy('project_identifier')),
             'wenhao_throughput' => $closed->filter(fn (RedmineIssue $issue): bool => RedmineIssue::isAcceptor($issue->assignee_name))->count(),
-            'advanced_to_verify' => $advanced->count(),
+            'advanced_to_verify' => $this->tracksStatusChangesDuring($end) ? $advanced->count() : null,
             'advanced_to_verify_by_assignee' => $this->countsDesc($advanced->countBy(
                 fn (RedmineStatusChange $change): string => ($change->previous_assignee_name ?: $change->assignee_name) ?: '(未指派)'
             )),
@@ -192,5 +197,19 @@ class DeliveryMetrics
     protected function countsDesc(Collection $counts): array
     {
         return $counts->sortDesc()->all();
+    }
+
+    /**
+     * Status changes are only observed from the first successful issue sync onwards (Redmine's API has no cheap
+     * history), so weeks that ended before then have no data — reported as null, never as 0.
+     */
+    public function tracksStatusChangesDuring(CarbonInterface $weekEnd): bool
+    {
+        $firstSync = SyncRun::query()
+            ->where('job', SyncJob::RedmineIssues)
+            ->where('status', SyncStatus::Ok)
+            ->min('started_at');
+
+        return $firstSync !== null && CarbonImmutable::parse($firstSync)->lt($weekEnd);
     }
 }

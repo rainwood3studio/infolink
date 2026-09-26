@@ -15,7 +15,7 @@ use Throwable;
     {--date= : Snapshot date (Y-m-d, default today); the mirror only knows current state}
     {--rebuild-history= : Approximate daily open stock from this date (Y-m-d) up to yesterday, then stop}
     {--week= : ISO week (e.g. 2026-W36): print its stats and record the weekly metrics, then stop}')]
-#[Description('Snapshot open Redmine issues and record the delivery metrics')]
+#[Description('Snapshot open Redmine issues and record the delivery metrics, then evaluate the alert rules')]
 class SnapshotRedmine extends Command
 {
     public function handle(RedmineSnapshotter $snapshotter, DeliveryMetrics $deliveryMetrics): int
@@ -45,6 +45,8 @@ class SnapshotRedmine extends Command
         $deliveryMetrics->recordWeekly($date);
 
         $this->components->info(sprintf('Snapshot %s: %d row(s); daily and weekly delivery metrics recorded.', $date->toDateString(), $rows));
+
+        $this->call('infolink:evaluate-rules');
 
         return self::SUCCESS;
     }

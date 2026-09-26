@@ -8,7 +8,7 @@ use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
 
 #[Signature('infolink:snapshot-finance')]
-#[Description('Record today\'s finance metrics and store a cash forecast snapshot')]
+#[Description('Record today\'s finance metrics and store a cash forecast snapshot, then evaluate the alert rules')]
 class SnapshotFinance extends Command
 {
     public function handle(FinancePosition $financePosition): int
@@ -26,6 +26,8 @@ class SnapshotFinance extends Command
             $forecast->as_of->toDateString(),
             number_format($forecast->year_end_balance),
         ));
+
+        $this->call('infolink:evaluate-rules');
 
         return self::SUCCESS;
     }
