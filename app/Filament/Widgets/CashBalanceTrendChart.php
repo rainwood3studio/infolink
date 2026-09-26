@@ -3,10 +3,12 @@
 namespace App\Filament\Widgets;
 
 use App\Models\BankTransaction;
+use App\Models\MetricValue;
 use Filament\Widgets\ChartWidget;
 
 /**
- * 現金與推估: month-end bank balance (all accounts) for the last 24 months. Only shown on that page.
+ * 現金與推估: month-end bank balance (all accounts) for the last 24 months — computed from transactions, with
+ * earlier months from the vault monthly summary (metric cash.month_end_balance). Only shown on that page.
  */
 class CashBalanceTrendChart extends ChartWidget
 {
@@ -62,7 +64,16 @@ class CashBalanceTrendChart extends ChartWidget
             $balances[$key] = array_sum($current);
         }
 
-        return array_slice($balances, -$months, preserve_keys: true);
+        $history = MetricValue::query()
+            ->where('metric_key', 'cash.month_end_balance')
+            ->where('dimension', '')
+            ->whereDate('period_start', '<', $first)
+            ->orderBy('period_start')
+            ->get(['period_start', 'value'])
+            ->mapWithKeys(fn (MetricValue $value): array => [$value->period_start->format('Y-m') => (int) $value->value])
+            ->all();
+
+        return array_slice($history + $balances, -$months, preserve_keys: true);
     }
 
     /**

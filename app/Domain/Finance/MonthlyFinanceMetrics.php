@@ -126,7 +126,8 @@ class MonthlyFinanceMetrics
     }
 
     /**
-     * Seed company.net_cashflow_ytd for months before line-level coverage from the vault's monthly bank summary
+     * Seed company.net_cashflow_ytd and cash.month_end_balance for months before line-level coverage from the vault's
+     * monthly bank summary
      * (shape: {account_name, rows: [{month: Y-m, deposit, withdrawal, net, closing_balance}]}).
      *
      * Only the running sum of `deposit − withdrawal` is used (the summary has no category split, so it cannot give
@@ -171,6 +172,16 @@ class MonthlyFinanceMetrics
             }
 
             $date = CarbonImmutable::createFromFormat('!Y-m', $month);
+
+            if (isset($row['closing_balance'])) {
+                $entries[] = [
+                    'key' => 'cash.month_end_balance',
+                    'value' => (int) $row['closing_balance'],
+                    'period_start' => $date,
+                    'vault_ref' => $vaultRef,
+                    'notes' => 'from the monthly bank summary (closing balance)',
+                ];
+            }
 
             if ($date->month === 1) {
                 $ytd = 0;

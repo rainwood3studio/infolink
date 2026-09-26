@@ -53,3 +53,12 @@ test('the charts render with forecast and schedule data', function () {
     Livewire::test(CashForecastChart::class)->assertOk();
     Livewire::test(ReceivableScheduleChart::class)->assertOk();
 });
+
+test('the dashboard forecast chart stops at year end', function () {
+    $this->travelTo('2026-09-26');
+    BankTransaction::factory()->create(['txn_date' => '2026-09-22', 'balance' => 1_000_000]);
+
+    $data = invade(Livewire::test(CashForecastChart::class)->instance())->getData();
+
+    expect(end($data['labels']))->toBe('2026-12');
+});

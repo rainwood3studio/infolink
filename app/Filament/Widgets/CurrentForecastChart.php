@@ -33,7 +33,7 @@ class CurrentForecastChart extends ChartWidget
 
     public function getDescription(): string
     {
-        return '方法：'.($this->forecast()->assumptions['method'] ?? '—');
+        return '綠：高確定性應收（含稅）與已排定的現金流入；紅：月成本基準與已排定支出；線：月底餘額。';
     }
 
     /**

@@ -6,7 +6,9 @@ x-php: &php
     context: ./docker/php
   restart: unless-stopped
   environment: &php-env
-    PHP_OPCACHE_ENABLE: "0"
+    # OPcache on, but re-checks file mtimes on every request, so code edits apply immediately.
+    PHP_OPCACHE_ENABLE: "1"
+    PHP_OPCACHE_REVALIDATE_FREQ: "0"
     AUTORUN_ENABLED: "false"
   volumes:
     - ./:/var/www/html

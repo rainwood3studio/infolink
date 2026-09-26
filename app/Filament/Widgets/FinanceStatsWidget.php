@@ -19,7 +19,7 @@ class FinanceStatsWidget extends StatsOverviewWidget
 
     protected ?string $heading = '財務';
 
-    protected int|array|null $columns = ['md' => 3, 'xl' => 6];
+    protected int|array|null $columns = ['md' => 3, '2xl' => 6];
 
     /**
      * @return array<Stat>

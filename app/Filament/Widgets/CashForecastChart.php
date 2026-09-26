@@ -6,15 +6,14 @@ use App\Domain\Finance\CashForecaster;
 use Filament\Widgets\ChartWidget;
 
 /**
- * Month-end cash forecast for the next six months, starting from the latest bank balance.
+ * Month-end cash forecast to year end, starting from the latest bank balance. It stops at year end because recurring
+ * income is only entered through December; beyond that the line would show costs without income.
  */
 class CashForecastChart extends ChartWidget
 {
-    public const int MONTHS_AHEAD = 6;
-
     protected static ?int $sort = 3;
 
-    protected ?string $heading = '現金推估（未來 6 個月）';
+    protected ?string $heading = '現金推估（至年底）';
 
     protected ?string $maxHeight = '280px';
 
@@ -28,9 +27,7 @@ class CashForecastChart extends ChartWidget
      */
     protected function getData(): array
     {
-        $forecaster = app(CashForecaster::class);
-        $probe = $forecaster->calculate();
-        $forecast = $forecaster->calculate(until: $probe->asOf->addMonthsNoOverflow(self::MONTHS_AHEAD)->format('Y-m'));
+        $forecast = app(CashForecaster::class)->calculate();
 
         return [
             'datasets' => [

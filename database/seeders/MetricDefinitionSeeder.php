@@ -67,6 +67,15 @@ class MetricDefinitionSeeder extends Seeder
                 'description' => '現金餘額 ÷ 常態月成本（最新 cost_baselines.monthly_cost）。不計任何未收應收，是「完全沒有收入時還能撐幾個月」的保守值。< 3 為警告，< 2 為嚴重。參考值：4.7 個月。',
             ],
             [
+                'key' => 'cash.month_end_balance',
+                'name' => '月底現金餘額',
+                'category' => Category::Finance,
+                'unit' => MetricUnit::Twd,
+                'period_type' => PeriodType::Month,
+                'better' => MetricDirection::Up,
+                'description' => '各月最後一天的銀行餘額（所有帳戶合計）。有逐筆交易的月份由交易計算、不寫入此指標；此指標只存逐筆交易涵蓋期之前、由 vault 月彙總（帳戶流水分析）得到的歷史月底餘額，供趨勢圖使用。',
+            ],
+            [
                 'key' => 'cash.monthly_cost',
                 'name' => '常態月成本',
                 'category' => Category::Finance,

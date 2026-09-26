@@ -10,6 +10,8 @@ use App\Models\BankAccount;
 use App\Models\BankTransaction;
 use App\Models\CashForecast;
 use App\Models\CostBaseline;
+use App\Models\MetricDefinition;
+use App\Models\MetricValue;
 use App\Models\Receivable;
 use App\Models\User;
 use Livewire\Livewire;
@@ -31,6 +33,19 @@ test('month-end balances take the last balance per month, summed across accounts
         '2026-06' => 900_000,
         '2026-07' => 900_000,
         '2026-08' => 800_000,
+    ]);
+});
+
+test('months before line-level transactions come from the recorded month-end balance history', function () {
+    BankTransaction::factory()->create(['txn_date' => '2026-07-10', 'balance' => 500_000]);
+    MetricValue::factory()->create(['metric_key' => MetricDefinition::factory()->create(['key' => 'cash.month_end_balance'])->key, 'period_start' => '2026-05-01', 'value' => 300_000]);
+    MetricValue::factory()->create(['metric_key' => 'cash.month_end_balance', 'period_start' => '2026-06-01', 'value' => 87_497]);
+    MetricValue::factory()->create(['metric_key' => 'cash.month_end_balance', 'period_start' => '2026-07-01', 'value' => 1]);
+
+    expect(CashBalanceTrendChart::monthEndBalances())->toBe([
+        '2026-05' => 300_000,
+        '2026-06' => 87_497,
+        '2026-07' => 500_000,
     ]);
 });
 
@@ -59,7 +74,8 @@ test('the live forecast chart explains its method', function () {
 
     Livewire::test(CurrentForecastChart::class)
         ->assertOk()
-        ->assertSee('方法：high-confidence outstanding receivables');
+        ->assertSee('高確定性應收（含稅）與已排定的現金流入')
+        ->assertDontSee('high-confidence outstanding receivables');
 });
 
 test('the version chart overlays year-end and minimum balances oldest first', function () {
