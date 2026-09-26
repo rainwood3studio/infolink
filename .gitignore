@@ -28,3 +28,6 @@ _ide_helper.php
 Homestead.json
 Homestead.yaml
 Thumbs.db
+
+# Real financial data extracted from the vault; never commit
+/database/seeders/data/

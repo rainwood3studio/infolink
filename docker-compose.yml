@@ -1,9 +1,10 @@
 name: infolink
 
 x-php: &php
-  image: serversideup/php:8.5-fpm-nginx
+  image: infolink-php:8.5
+  build:
+    context: ./docker/php
   restart: unless-stopped
-  env_file: .env
   environment: &php-env
     PHP_OPCACHE_ENABLE: "0"
     AUTORUN_ENABLED: "false"

@@ -1,0 +1,367 @@
+<?php
+
+namespace Database\Seeders;
+
+use App\Enums\Category;
+use App\Enums\MetricDirection;
+use App\Enums\MetricUnit;
+use App\Enums\PeriodType;
+use App\Models\MetricDefinition;
+use Illuminate\Database\Seeder;
+
+/**
+ * The metric catalogue from docs/04-metrics-and-dashboard.md. Idempotent: re-running updates definitions by key.
+ *
+ * `description` is read by Claude (list_metric_definitions), so it states exactly how the number is derived and its caveats.
+ */
+class MetricDefinitionSeeder extends Seeder
+{
+    /**
+     * Seed the metric definitions.
+     */
+    public function run(): void
+    {
+        foreach (self::definitions() as $index => $definition) {
+            MetricDefinition::query()->updateOrCreate(
+                ['key' => $definition['key']],
+                [
+                    ...$definition,
+                    'target' => $definition['target'] ?? null,
+                    'warn_threshold' => $definition['warn_threshold'] ?? null,
+                    'critical_threshold' => $definition['critical_threshold'] ?? null,
+                    'calculator' => null,
+                    'is_pinned' => $definition['is_pinned'] ?? false,
+                    'sort' => ($index + 1) * 10,
+                ],
+            );
+        }
+    }
+
+    /**
+     * @return list<array{key: string, name: string, category: Category, unit: MetricUnit, period_type: PeriodType, better: MetricDirection, description: string, is_pinned?: bool, target?: int|float, warn_threshold?: int|float, critical_threshold?: int|float}>
+     */
+    public static function definitions(): array
+    {
+        return [
+            // 財務 finance
+            [
+                'key' => 'cash.balance',
+                'name' => '現金餘額',
+                'category' => Category::Finance,
+                'unit' => MetricUnit::Twd,
+                'period_type' => PeriodType::Snapshot,
+                'better' => MetricDirection::Up,
+                'is_pinned' => true,
+                'description' => '觀測日當天最新一筆銀行交易的銀行列印餘額（bank_transactions.balance），新台幣元。period_start 為觀測日。參考值：1,072,776（2026-09-22）。',
+            ],
+            [
+                'key' => 'cash.runway_months',
+                'name' => '現金可撐月數',
+                'category' => Category::Finance,
+                'unit' => MetricUnit::Months,
+                'period_type' => PeriodType::Snapshot,
+                'better' => MetricDirection::Up,
+                'is_pinned' => true,
+                'warn_threshold' => 3,
+                'critical_threshold' => 2,
+                'description' => '現金餘額 ÷ 常態月成本（最新 cost_baselines.monthly_cost）。不計任何未收應收，是「完全沒有收入時還能撐幾個月」的保守值。< 3 為警告，< 2 為嚴重。參考值：4.7 個月。',
+            ],
+            [
+                'key' => 'cash.monthly_cost',
+                'name' => '常態月成本',
+                'category' => Category::Finance,
+                'unit' => MetricUnit::Twd,
+                'period_type' => PeriodType::Month,
+                'better' => MetricDirection::Down,
+                'description' => '當月銀行支出加總，扣除標記 is_one_off 的一次性支出（例如中秋獎金）與代墊款（category = reimbursement）。period_start 為該月 1 日。參考值：229,666。',
+            ],
+            [
+                'key' => 'cash.forecast_min_90d',
+                'name' => '未來 90 天推估最低餘額',
+                'category' => Category::Finance,
+                'unit' => MetricUnit::Twd,
+                'period_type' => PeriodType::Snapshot,
+                'better' => MetricDirection::Up,
+                'is_pinned' => true,
+                'critical_threshold' => 500000,
+                'description' => '最新一版 cash_forecasts 中，基準日起 90 天內的最低推估餘額。流入只計高確定性（confidence = high）應收，流出用常態月成本。< 500,000 為嚴重。',
+            ],
+            [
+                'key' => 'cash.forecast_year_end',
+                'name' => '推估年底餘額',
+                'category' => Category::Finance,
+                'unit' => MetricUnit::Twd,
+                'period_type' => PeriodType::Snapshot,
+                'better' => MetricDirection::Up,
+                'description' => '最新一版 cash_forecasts 的年底（12 月底）推估餘額，假設與該版推估相同（預設只計高確定性應收）。比較不同觀測日的值可看推估的變化。參考值：2,128,778。',
+            ],
+            [
+                'key' => 'ar.outstanding_taxed',
+                'name' => '未收應收（含稅）',
+                'category' => Category::Finance,
+                'unit' => MetricUnit::Twd,
+                'period_type' => PeriodType::Snapshot,
+                'better' => MetricDirection::None,
+                'is_pinned' => true,
+                'description' => 'receivables 中狀態為 planned／invoiced（含逾期）的含稅金額加總，只計高確定性（confidence = high）；低確定性另見 ar.low_confidence_taxed。數字大不一定是壞事，要看是否逾期。參考值：1,365,000。',
+            ],
+            [
+                'key' => 'ar.overdue_taxed',
+                'name' => '逾期應收（含稅）',
+                'category' => Category::Finance,
+                'unit' => MetricUnit::Twd,
+                'period_type' => PeriodType::Snapshot,
+                'better' => MetricDirection::Down,
+                'is_pinned' => true,
+                'description' => '已過 expected_on 仍未收（狀態 planned／invoiced）的應收含稅金額加總。逾期是由日期即時算出，不依賴人工把狀態改成 overdue。',
+            ],
+            [
+                'key' => 'ar.low_confidence_taxed',
+                'name' => '低確定性應收',
+                'category' => Category::Finance,
+                'unit' => MetricUnit::Twd,
+                'period_type' => PeriodType::Snapshot,
+                'better' => MetricDirection::None,
+                'description' => '未收且 confidence = low 的應收含稅金額加總。這些款項不計入現金推估的基本情境。參考值：577,500。',
+            ],
+            [
+                'key' => 'revenue.received',
+                'name' => '當月入帳收入',
+                'category' => Category::Finance,
+                'unit' => MetricUnit::Twd,
+                'period_type' => PeriodType::Month,
+                'better' => MetricDirection::Up,
+                'description' => '當月 bank_transactions 中 category = revenue 的存入金額加總（含稅，即實際入帳金額）。是現金基礎，不是發票或權責基礎的營收。',
+            ],
+            [
+                'key' => 'revenue.recurring_monthly',
+                'name' => '每月經常性收入',
+                'category' => Category::Finance,
+                'unit' => MetricUnit::Twd,
+                'period_type' => PeriodType::Month,
+                'better' => MetricDirection::Up,
+                'description' => 'is_recurring 應收（維運費等每月固定款，例如墊腳石維運、我識 APP 維護）的每月金額加總。代表每月可預期的收入底。參考值：約 120,000。',
+            ],
+            [
+                'key' => 'cost.personnel_ratio',
+                'name' => '人事占支出比',
+                'category' => Category::Finance,
+                'unit' => MetricUnit::Ratio,
+                'period_type' => PeriodType::Month,
+                'better' => MetricDirection::None,
+                'description' => '（薪資＋勞健保＋勞退）÷ 常態支出（排除一次性支出與代墊）。以 0–1 小數儲存（0.85 = 85%）。參考值：0.85。',
+            ],
+            [
+                'key' => 'tax.vat_reserve',
+                'name' => '營業稅應預留',
+                'category' => Category::Finance,
+                'unit' => MetricUnit::Twd,
+                'period_type' => PeriodType::Snapshot,
+                'better' => MetricDirection::None,
+                'description' => '本期（雙月）已開發票的銷項稅額，減去已攤入常態月成本的部分，即下次申報（奇數月 15 日前）需要另外準備的現金。參考值：11 月約 80,000。',
+            ],
+            [
+                'key' => 'company.net_cashflow_ytd',
+                'name' => '今年累計淨現金流',
+                'category' => Category::Finance,
+                'unit' => MetricUnit::Twd,
+                'period_type' => PeriodType::Month,
+                'better' => MetricDirection::Up,
+                'description' => '今年 1 月 1 日到該月底的銀行存入減提出累計。是年度目標「開始獲利」的代理指標（現金基礎，非會計損益）。period_start 為該月 1 日。',
+            ],
+
+            // 業務 sales
+            [
+                'key' => 'sales.pipeline_weighted',
+                'name' => '加權業務機會金額',
+                'category' => Category::Sales,
+                'unit' => MetricUnit::Twd,
+                'period_type' => PeriodType::Snapshot,
+                'better' => MetricDirection::Up,
+                'is_pinned' => true,
+                'description' => 'Σ(deals.amount_untaxed × probability)，未稅，不含 stage 為 won／lost 的機會。',
+            ],
+            [
+                'key' => 'sales.deals_open',
+                'name' => '進行中業務機會數',
+                'category' => Category::Sales,
+                'unit' => MetricUnit::Count,
+                'period_type' => PeriodType::Snapshot,
+                'better' => MetricDirection::Up,
+                'description' => 'stage 不是 won／lost 的業務機會筆數。dimension 空字串為總數，`stage:<stage>` 為依階段拆分。',
+            ],
+            [
+                'key' => 'sales.deals_no_next_action',
+                'name' => '沒有下一步的機會',
+                'category' => Category::Sales,
+                'unit' => MetricUnit::Count,
+                'period_type' => PeriodType::Snapshot,
+                'better' => MetricDirection::Down,
+                'description' => '進行中的業務機會中，next_action_on 為空或已過期的筆數。應該維持 0。',
+            ],
+            [
+                'key' => 'sales.won_amount',
+                'name' => '當月成交金額',
+                'category' => Category::Sales,
+                'unit' => MetricUnit::Twd,
+                'period_type' => PeriodType::Month,
+                'better' => MetricDirection::Up,
+                'description' => '當月轉為 won 的業務機會 amount_untaxed 加總（未稅）。是簽約金額，不是入帳金額。',
+            ],
+            [
+                'key' => 'saas.mrr',
+                'name' => 'SaaS 月經常性收入',
+                'category' => Category::Sales,
+                'unit' => MetricUnit::Twd,
+                'period_type' => PeriodType::Month,
+                'better' => MetricDirection::Up,
+                'description' => 'SaaS POS 的月經常性收入（未稅）。SaaS POS 上線後才啟用，目前由手動輸入；沒有值代表尚未上線，不是 0。',
+            ],
+
+            // 交付 delivery（Redmine）
+            [
+                'key' => 'delivery.open',
+                'name' => '未結案存量',
+                'category' => Category::Delivery,
+                'unit' => MetricUnit::Count,
+                'period_type' => PeriodType::Day,
+                'better' => MetricDirection::Down,
+                'is_pinned' => true,
+                'description' => '觀測日當天 Redmine 未結案（is_closed = false）議題數。dimension 空字串為全公司，`project:<identifier>` 為依專案拆分。參考值（W36）：601。',
+            ],
+            [
+                'key' => 'delivery.created',
+                'name' => '新增議題',
+                'category' => Category::Delivery,
+                'unit' => MetricUnit::Count,
+                'period_type' => PeriodType::Week,
+                'better' => MetricDirection::None,
+                'description' => '該週（週一起算）在 Redmine 新建立的議題數（依 created_on）。參考值（W36）：46。',
+            ],
+            [
+                'key' => 'delivery.closed',
+                'name' => '結案議題',
+                'category' => Category::Delivery,
+                'unit' => MetricUnit::Count,
+                'period_type' => PeriodType::Week,
+                'better' => MetricDirection::None,
+                'description' => '該週（週一起算）結案的議題數（依 closed_on）。注意：這不是產能指標——幾乎所有議題都由文豪驗收後結案，反映的是文豪的驗收量；團隊產能請看 delivery.advanced_to_verify。參考值（W36）：72。',
+            ],
+            [
+                'key' => 'delivery.net_flow',
+                'name' => '淨流量',
+                'category' => Category::Delivery,
+                'unit' => MetricUnit::Count,
+                'period_type' => PeriodType::Week,
+                'better' => MetricDirection::Down,
+                'is_pinned' => true,
+                'description' => '該週新增議題數 − 結案議題數。正數代表 backlog 在成長，負數代表在消化。連續 3 週 > 0 會觸發警告。參考值（W36）：−26。',
+            ],
+            [
+                'key' => 'delivery.verifying.wenhao',
+                'name' => '驗證中（文豪隊列）',
+                'category' => Category::Delivery,
+                'unit' => MetricUnit::Count,
+                'period_type' => PeriodType::Day,
+                'better' => MetricDirection::Down,
+                'is_pinned' => true,
+                'description' => '狀態為「驗證中」且指派給文豪的未結案議題數。這是正常的驗收排隊，數量受文豪一人的驗收吞吐限制，不代表停滯。參考值（W36）：153。',
+            ],
+            [
+                'key' => 'delivery.verifying.others',
+                'name' => '驗證中（非文豪）',
+                'category' => Category::Delivery,
+                'unit' => MetricUnit::Count,
+                'period_type' => PeriodType::Day,
+                'better' => MetricDirection::Down,
+                'is_pinned' => true,
+                'warn_threshold' => 20,
+                'description' => '狀態為「驗證中」但指派給文豪以外的人的未結案議題數。這些議題脫離了正常驗收流程，通常已經停滯。> 20 為警告。可拆 `project:<identifier>`。參考值（W36）：58。',
+            ],
+            [
+                'key' => 'delivery.advanced_to_verify',
+                'name' => '推進到驗證中的筆數',
+                'category' => Category::Delivery,
+                'unit' => MetricUnit::Count,
+                'period_type' => PeriodType::Week,
+                'better' => MetricDirection::Up,
+                'description' => '該週狀態變更為「驗證中」的議題數。這才是真正的團隊產能指標（開發完成交付驗收）。dimension `assignee:<姓名>` 為依推進者拆分。',
+            ],
+            [
+                'key' => 'delivery.wenhao_throughput',
+                'name' => '文豪每週驗收量',
+                'category' => Category::Delivery,
+                'unit' => MetricUnit::Count,
+                'period_type' => PeriodType::Week,
+                'better' => MetricDirection::Up,
+                'description' => '該週由文豪從「驗證中」驗收結案的議題數。因為幾乎所有結案都經過文豪，這個值是公司結案速度的上限。',
+            ],
+            [
+                'key' => 'delivery.stalled_30d',
+                'name' => '停滯議題（30 天）',
+                'category' => Category::Delivery,
+                'unit' => MetricUnit::Count,
+                'period_type' => PeriodType::Day,
+                'better' => MetricDirection::Down,
+                'description' => '未結案且 updated_on 超過 30 天沒有更新的議題數。可拆 `project:<identifier>`。',
+            ],
+            [
+                'key' => 'delivery.stalled_90d',
+                'name' => '停滯議題（90 天）',
+                'category' => Category::Delivery,
+                'unit' => MetricUnit::Count,
+                'period_type' => PeriodType::Day,
+                'better' => MetricDirection::Down,
+                'description' => '未結案且 updated_on 超過 90 天沒有更新的議題數。週增 > 10 會觸發警告。可拆 `project:<identifier>`。參考值（W36）：53。',
+            ],
+            [
+                'key' => 'delivery.overdue',
+                'name' => '逾期議題',
+                'category' => Category::Delivery,
+                'unit' => MetricUnit::Count,
+                'period_type' => PeriodType::Day,
+                'better' => MetricDirection::Down,
+                'description' => '未結案、有 due_date 且 due_date 早於觀測日的議題數。沒有填 due_date 的議題不計入。',
+            ],
+            [
+                'key' => 'delivery.unassigned',
+                'name' => '未指派',
+                'category' => Category::Delivery,
+                'unit' => MetricUnit::Count,
+                'period_type' => PeriodType::Day,
+                'better' => MetricDirection::Down,
+                'description' => '未結案且沒有指派人的議題數。',
+            ],
+            [
+                'key' => 'delivery.hours_logged',
+                'name' => '登錄工時',
+                'category' => Category::Delivery,
+                'unit' => MetricUnit::Hours,
+                'period_type' => PeriodType::Week,
+                'better' => MetricDirection::None,
+                'description' => '該週 Redmine 登錄的工時加總，dimension `user:<姓名>` 依人拆分。僅供參考：目前驗收工時沒有登錄，登錄習慣也不一致，不能用來衡量產能或工作量。參考值（W36）：25.5。',
+            ],
+            [
+                'key' => 'delivery.inflow_to_wenhao_ratio',
+                'name' => '新案落到文豪的比例',
+                'category' => Category::Delivery,
+                'unit' => MetricUnit::Ratio,
+                'period_type' => PeriodType::Week,
+                'better' => MetricDirection::Down,
+                'description' => '該週新增議題中，建立時就指派給文豪的比例，以 0–1 小數儲存（0.8 = 80%）。單點瓶頸指標：越高代表越依賴文豪一人。參考值（W36）：0.8。',
+            ],
+
+            // 公司 company
+            [
+                'key' => 'company.closing_projects',
+                'name' => '年底前待結案專案進度',
+                'category' => Category::Company,
+                'unit' => MetricUnit::Count,
+                'period_type' => PeriodType::Snapshot,
+                'better' => MetricDirection::Down,
+                'is_pinned' => true,
+                'description' => 'projects.status = closing 的專案（目前四案）各自在 Redmine 的未結議題數。dimension 為 `project:<identifier>`，空字串為四案合計。距目標日天數不存在這個指標裡，請看 projects.target_close_date。目標日前 30 天內仍有 > 10 筆未結議題會觸發嚴重警示。',
+            ],
+        ];
+    }
+}

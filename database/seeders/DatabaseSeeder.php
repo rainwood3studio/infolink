@@ -2,24 +2,29 @@
 
 namespace Database\Seeders;
 
-use App\Models\User;
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Log;
 
 class DatabaseSeeder extends Seeder
 {
-    use WithoutModelEvents;
-
     /**
      * Seed the application's database.
+     *
+     * Model events stay enabled: HasSource fills `source`/`actor` and Receivable computes `amount_taxed` on save.
      */
     public function run(): void
     {
-        // User::factory(10)->create();
+        $this->call(MetricDefinitionSeeder::class);
 
-        User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
-        ]);
+        if (! FinanceDataSeeder::dataIsAvailable()) {
+            $message = 'Skipping FinanceDataSeeder: '.FinanceDataSeeder::dataPath().' does not exist (the real finance data is gitignored).';
+
+            Log::warning($message);
+            $this->command?->warn($message);
+
+            return;
+        }
+
+        $this->call(FinanceDataSeeder::class);
     }
 }
