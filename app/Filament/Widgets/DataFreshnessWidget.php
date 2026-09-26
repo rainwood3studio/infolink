@@ -2,9 +2,12 @@
 
 namespace App\Filament\Widgets;
 
+use App\Enums\ReportType;
 use App\Enums\SyncJob;
 use App\Enums\SyncStatus;
+use App\Filament\Resources\Reports\ReportResource;
 use App\Models\BankTransaction;
+use App\Models\Report;
 use App\Models\SyncRun;
 use Filament\Widgets\Widget;
 
@@ -20,14 +23,19 @@ class DataFreshnessWidget extends Widget
     protected int|string|array $columnSpan = 'full';
 
     /**
-     * @return list<array{label:string, value:string, color:string, icon:?string, hint:?string}>
+     * On weekdays the brief is expected by this hour; a missing one after it is flagged.
+     */
+    public const int DAILY_BRIEF_DUE_HOUR = 10;
+
+    /**
+     * @return list<array{label:string, value:string, color:string, icon:?string, hint:?string, url?:?string}>
      */
     public function getSources(): array
     {
         return [
             $this->redmine(),
             $this->bank(),
-            ['label' => '今日簡報', 'value' => '尚未啟用', 'color' => 'gray', 'icon' => null, 'hint' => null],
+            $this->dailyBrief(),
         ];
     }
 
@@ -75,6 +83,42 @@ class DataFreshnessWidget extends Widget
             'color' => $latest === null ? 'gray' : 'primary',
             'icon' => null,
             'hint' => null,
+        ];
+    }
+
+    /**
+     * Today's `daily_brief` report, linked; a missing one turns amber on weekdays after the due hour.
+     *
+     * @return array{label:string, value:string, color:string, icon:?string, hint:?string, url:?string}
+     */
+    protected function dailyBrief(): array
+    {
+        $report = Report::query()
+            ->where('type', ReportType::DailyBrief)
+            ->whereDate('period_start', today())
+            ->latest('id')
+            ->first();
+
+        if ($report !== null) {
+            return [
+                'label' => '今日簡報',
+                'value' => $report->created_at->format('H:i').' 產生',
+                'color' => 'success',
+                'icon' => 'heroicon-m-check-circle',
+                'hint' => null,
+                'url' => ReportResource::getUrl('view', ['record' => $report]),
+            ];
+        }
+
+        $isOverdue = now()->isWeekday() && now()->hour >= self::DAILY_BRIEF_DUE_HOUR;
+
+        return [
+            'label' => '今日簡報',
+            'value' => '今日尚未產生',
+            'color' => $isOverdue ? 'warning' : 'gray',
+            'icon' => $isOverdue ? 'heroicon-m-exclamation-triangle' : null,
+            'hint' => null,
+            'url' => null,
         ];
     }
 }

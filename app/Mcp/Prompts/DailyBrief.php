@@ -1,0 +1,57 @@
+<?php
+
+namespace App\Mcp\Prompts;
+
+use Laravel\Mcp\Request;
+use Laravel\Mcp\Response;
+use Laravel\Mcp\Server\Attributes\Description;
+use Laravel\Mcp\Server\Attributes\Name;
+use Laravel\Mcp\Server\Prompts\Argument;
+
+#[Name('daily-brief')]
+#[Description('每日簡報（週一～五 08:30）：get_briefing → 找出今天要注意的 3–5 件事 → raise_insight / create_action_item → save_report(daily_brief, notify: true)。')]
+class DailyBrief extends InfolinkPrompt
+{
+    public function handle(Request $request): Response
+    {
+        $validated = $request->validate([
+            'date' => ['nullable', 'date_format:Y-m-d'],
+        ], [
+            'date.date_format' => 'date must be YYYY-MM-DD.',
+        ]);
+
+        $date = $this->parseDate($validated['date'] ?? null, today()->toImmutable())->toDateString();
+
+        return Response::text(<<<MARKDOWN
+        # 聯騰資訊每日簡報：{$date}
+
+        你是聯騰資訊（3 人軟體公司）的營運助理。用 infolink MCP 的工具產出 {$date} 的每日簡報，並把結論寫回 app。只用 infolink 工具與讀檔，不要改 vault、不要跑 shell。
+
+        ## 步驟
+
+        1. `get_briefing`：一次拿到全貌（釘選指標與變化、超門檻指標、open insights、逾期／近期待辦、未收應收、最新現金推估、資料新鮮度）。資料過期就在報告開頭註明。
+        2. 只在需要細節時補查：`get_cash_position`、`list_receivables`（`overdue_only: true`）、`redmine_summary`、`query_metrics`、`list_insights`、`list_action_items`。
+        3. 挑出**今天要注意的 3–5 件事**，依急迫度排序：逾期或本週到期的收款、現金低點、交付停滯／驗證堆積、到期的待辦、沒有下一步的業務機會。沒事就說沒事，不要湊數。
+        4. 每件事照寫回規則處理：
+           - 新的或持續中的風險 → `raise_insight`（同一件事沿用同一個 fingerprint）。
+           - 已經解決的 → `resolve_insight`，附原因。
+           - 今天需要有人動手的 → `create_action_item`（`insight_id` 連回，給 `due_on`）。
+        5. `save_report`：`type: daily_brief`、`period_start: {$date}`、`notify: true`；`body` 為 Markdown（開頭一句話總結，再列 3–5 件事，每件附數字與建議動作），`metrics_snapshot` 放引用的指標值。
+        6. 最後在對話中回覆簡短摘要（同報告開頭）與寫入了哪些 insight／待辦。
+
+        {$this->writeBackRules()}
+
+        {$this->domainCaveats()}
+        MARKDOWN);
+    }
+
+    /**
+     * @return array<int, Argument>
+     */
+    public function arguments(): array
+    {
+        return [
+            new Argument('date', '簡報日期 YYYY-MM-DD，預設今天。'),
+        ];
+    }
+}

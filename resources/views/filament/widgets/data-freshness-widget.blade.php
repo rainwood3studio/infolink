@@ -5,7 +5,13 @@
             @foreach ($this->getSources() as $source)
                 <span style="display: inline-flex; flex-wrap: wrap; align-items: center; gap: 0.375rem;">
                     <span style="opacity: 0.7;">{{ $source['label'] }}</span>
-                    <x-filament::badge :color="$source['color']" :icon="$source['icon']">{{ $source['value'] }}</x-filament::badge>
+                    @if ($source['url'] ?? null)
+                        <a href="{{ $source['url'] }}">
+                            <x-filament::badge :color="$source['color']" :icon="$source['icon']">{{ $source['value'] }}</x-filament::badge>
+                        </a>
+                    @else
+                        <x-filament::badge :color="$source['color']" :icon="$source['icon']">{{ $source['value'] }}</x-filament::badge>
+                    @endif
                     @if ($source['hint'])
                         <span style="opacity: 0.6; font-size: 0.8125rem;">（{{ $source['hint'] }}）</span>
                     @endif

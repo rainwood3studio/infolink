@@ -18,7 +18,7 @@ test('it shows placeholders before anything has synced', function () {
         ->assertSee('尚未同步')
         ->assertSee('尚未匯入')
         ->assertSee('今日簡報')
-        ->assertSee('尚未啟用');
+        ->assertSee('今日尚未產生');
 });
 
 test('it shows how long ago the last successful issue sync finished', function () {

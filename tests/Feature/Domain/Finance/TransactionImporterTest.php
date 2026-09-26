@@ -126,3 +126,31 @@ it('throws and rolls back in strict mode when balances do not chain', function (
 
     expect(BankTransaction::count())->toBe(0);
 });
+
+it('fills blank annotations on re-import but keeps curated ones', function () {
+    $rows = statementRows();
+    $this->importer->import($this->account, $rows);
+    $line = BankTransaction::query()->orderBy('id')->first();
+    $line->update(['category' => TransactionCategory::Subscription, 'notes' => '固定服務費（已確認）']);
+
+    $rows[0] = [...$rows[0], 'category' => 'other', 'notes' => '固定服務費', 'counterparty' => '中華電信'];
+    $result = $this->importer->import($this->account, $rows);
+
+    expect($line->fresh())
+        ->category->toBe(TransactionCategory::Subscription)
+        ->notes->toBe('固定服務費（已確認）')
+        ->counterparty->toBe('中華電信')
+        ->and($result->updated)->toBe(1);
+});
+
+it('replaces curated annotations only when asked to', function () {
+    $rows = statementRows();
+    $this->importer->import($this->account, $rows);
+    $line = BankTransaction::query()->orderBy('id')->first();
+    $line->update(['notes' => '舊備註']);
+
+    $rows[0] = [...$rows[0], 'notes' => '新備註'];
+    $this->importer->import($this->account, $rows, overwriteAnnotations: true);
+
+    expect($line->fresh()->notes)->toBe('新備註');
+});

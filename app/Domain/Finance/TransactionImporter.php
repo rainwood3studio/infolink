@@ -22,20 +22,23 @@ use InvalidArgumentException;
 class TransactionImporter
 {
     /**
-     * Optional row keys that are only written when present, so re-imports never wipe manual edits.
+     * Optional row keys (annotations) that are only written when present. On an existing line they only fill values
+     * that are still unset (null / '' / category other / not one-off), so a re-import never clobbers curated
+     * annotations — unless $overwriteAnnotations is passed.
      */
     private const array OPTIONAL_ATTRIBUTES = ['counterparty', 'category', 'is_one_off', 'receivable_id', 'notes', 'vault_ref'];
 
     /**
      * @param  list<array{txn_date:string|DateTimeInterface, summary:?string, withdrawal:int|string|null, deposit:int|string|null, balance:int|string, counterparty?:?string, category?:TransactionCategory|string|null, is_one_off?:bool, receivable_id?:?int, notes?:?string, vault_ref?:?string}>  $rows  Statement lines in statement order.
      * @param  bool  $strict  Throw {@see BalanceContinuityException} (and roll back) when any balance does not chain.
+     * @param  bool  $overwriteAnnotations  Replace existing annotations on already-imported lines instead of only filling blanks.
      */
-    public function import(BankAccount $account, array $rows, Source $source = Source::Bank, bool $strict = false): ImportResult
+    public function import(BankAccount $account, array $rows, Source $source = Source::Bank, bool $strict = false, bool $overwriteAnnotations = false): ImportResult
     {
         $normalized = array_map($this->normalizeRow(...), array_values($rows));
         $keyed = $this->assignExternalKeys($account, $normalized);
 
-        return DB::transaction(function () use ($account, $keyed, $source, $strict): ImportResult {
+        return DB::transaction(function () use ($account, $keyed, $source, $strict, $overwriteAnnotations): ImportResult {
             $breaks = $this->findContinuityBreaks($account, $keyed, $source);
 
             if ($strict && $breaks !== []) {
@@ -66,7 +69,7 @@ class TransactionImporter
                     continue;
                 }
 
-                $existing->fill($attributes);
+                $existing->fill($overwriteAnnotations ? $attributes : $this->withoutCuratedAnnotations($existing, $attributes));
 
                 if ($existing->isDirty()) {
                     $existing->save();
@@ -219,5 +222,31 @@ class TransactionImporter
             'balance' => $row['balance'],
             ...$row['optional'],
         ];
+    }
+
+    /**
+     * Drop incoming annotations that would replace a value someone already set on the stored line.
+     *
+     * @param  array<string, mixed>  $attributes
+     * @return array<string, mixed>
+     */
+    protected function withoutCuratedAnnotations(BankTransaction $existing, array $attributes): array
+    {
+        foreach (self::OPTIONAL_ATTRIBUTES as $key) {
+            if (array_key_exists($key, $attributes) && ! $this->isUnsetAnnotation($key, $existing->getAttribute($key))) {
+                unset($attributes[$key]);
+            }
+        }
+
+        return $attributes;
+    }
+
+    protected function isUnsetAnnotation(string $key, mixed $value): bool
+    {
+        return match ($key) {
+            'category' => $value === null || $value === TransactionCategory::Other,
+            'is_one_off' => ! $value,
+            default => $value === null || $value === '',
+        };
     }
 }

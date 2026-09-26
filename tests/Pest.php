@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\User;
 use Tests\Concerns\SafeRefreshDatabase;
 use Tests\TestCase;
 
@@ -47,4 +48,16 @@ expect()->extend('toBeOne', function () {
 function something()
 {
     // ..
+}
+
+/**
+ * A user acting through a Sanctum token with the given abilities, as Claude does over HTTP.
+ *
+ * @param  list<string>  $abilities
+ */
+function mcpUser(array $abilities = ['read', 'write'], string $tokenName = 'claude-cli'): User
+{
+    $user = User::factory()->create();
+
+    return $user->withAccessToken($user->createToken($tokenName, $abilities)->accessToken);
 }
