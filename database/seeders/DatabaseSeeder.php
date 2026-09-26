@@ -28,6 +28,10 @@ class DatabaseSeeder extends Seeder
 
         $this->call(FinanceDataSeeder::class);
 
+        // After FinanceDataSeeder so the history can link its receivables; importing the older lines into an account
+        // that already holds newer ones passes strict continuity, and the seeder checks the join to 2026-07-06.
+        $this->call(BankHistorySeeder::class);
+
         if (! DealSeeder::dataIsAvailable()) {
             $message = 'Skipping DealSeeder: '.DealSeeder::dataPath().' does not exist (the vault sales data is gitignored).';
 
