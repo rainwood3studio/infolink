@@ -10,9 +10,13 @@ x-php: &php
     PHP_OPCACHE_ENABLE: "1"
     PHP_OPCACHE_REVALIDATE_FREQ: "0"
     AUTORUN_ENABLED: "false"
+    # AWS profiles for the SSM disk collector (services.ssm.targets).
+    AWS_SHARED_CREDENTIALS_FILE: /aws/credentials
+    AWS_CONFIG_FILE: /aws/config
   volumes:
     - ./:/var/www/html
     - "${VAULT_PATH}:/vault:ro"
+    - "${AWS_CONFIG_PATH:-~/.aws}:/aws:ro"
   depends_on:
     db:
       condition: service_healthy

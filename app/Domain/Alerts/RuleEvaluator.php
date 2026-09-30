@@ -11,6 +11,7 @@ use App\Domain\Alerts\Rules\MetricThresholdRule;
 use App\Domain\Alerts\Rules\ReceivableDueRule;
 use App\Domain\Alerts\Rules\ReceivableOverdueRule;
 use App\Domain\Alerts\Rules\Rule;
+use App\Domain\Alerts\Rules\ServerDiskRule;
 use App\Domain\Alerts\Rules\SyncFailedRule;
 use App\Domain\Alerts\Rules\VatReserveRule;
 use App\Domain\Insights\InsightService;
@@ -55,6 +56,7 @@ class RuleEvaluator
         DealStaleRule::class,
         SyncFailedRule::class,
         BriefMissingRule::class,
+        ServerDiskRule::class,
     ];
 
     public function __construct(protected InsightService $insights) {}

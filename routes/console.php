@@ -17,3 +17,4 @@ Schedule::command('infolink:sync-redmine --full')->sundays()->at('03:00')->witho
 Schedule::command('infolink:snapshot-redmine')->dailyAt('23:50')->withoutOverlapping();
 Schedule::command('infolink:flush-notifications')->everyFiveMinutes()->withoutOverlapping();
 Schedule::command('infolink:evaluate-rules')->hourly()->withoutOverlapping();
+Schedule::command('infolink:collect-server-disks')->hourlyAt(15)->withoutOverlapping();

@@ -26,6 +26,7 @@
 | [03-integration.md](03-integration.md) | **Claude 整合的核心**：MCP 工具、REST API、Redmine 同步、vault 連接、排程分析、通知 |
 | [04-metrics-and-dashboard.md](04-metrics-and-dashboard.md) | 指標目錄、警示規則、Filament 頁面與儀表板版面 |
 | [05-roadmap.md](05-roadmap.md) | 分階段實作計畫、每階段驗收標準、待決事項 |
+| [06-servers.md](06-servers.md) | 伺服器維運：SSM 硬碟空間儀表板、清理紀錄、scm 資料庫每日備份 |
 
 ## 關鍵決策摘要
 

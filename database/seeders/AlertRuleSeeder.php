@@ -9,6 +9,7 @@ use App\Domain\Alerts\Rules\DealStaleRule;
 use App\Domain\Alerts\Rules\DeliveryBacklogGrowingRule;
 use App\Domain\Alerts\Rules\ReceivableDueRule;
 use App\Domain\Alerts\Rules\ReceivableOverdueRule;
+use App\Domain\Alerts\Rules\ServerDiskRule;
 use App\Domain\Alerts\Rules\SyncFailedRule;
 use App\Domain\Alerts\Rules\VatReserveRule;
 use App\Enums\Category;
@@ -208,6 +209,20 @@ class AlertRuleSeeder extends Seeder
                 'title_template' => '{date} 每日簡報到 {after} 仍未產生',
                 'fingerprint_template' => 'brief-missing:{date}',
                 'params' => ['after' => '10:00'],
+            ],
+            [
+                'key' => 'server-disk',
+                'name' => '伺服器硬碟空間',
+                'description' => 'SSM 管理的機器任一分割區使用率達門檻 %（達 critical 門檻升為嚴重），或依近 7 天增長推估 days 天內會滿；每個分割區一則，清出空間後自動結案。',
+                'query_class' => ServerDiskRule::class,
+                'operator' => '>=',
+                'threshold' => 80,
+                'critical_threshold' => 90,
+                'severity' => InsightSeverity::Warning,
+                'category' => Category::Company,
+                'title_template' => '{name} {mount} 已用 {percent}%（剩 {free} GB）',
+                'fingerprint_template' => 'disk-usage:{instance_id}:{mount}',
+                'params' => ['days' => 14],
             ],
         ];
     }

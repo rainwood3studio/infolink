@@ -10,7 +10,7 @@ test('it seeds every rule from the doc, all active', function () {
 
     expect(AlertRule::query()->orderBy('key')->pluck('key')->all())->toBe([
         'brief-missing', 'cash-low', 'cash-runway', 'closing-risk', 'deal-stale', 'delivery-backlog-growing',
-        'delivery-offflow', 'delivery-stalled', 'receivable-due', 'receivable-overdue', 'sync-failed', 'vat-reserve',
+        'delivery-offflow', 'delivery-stalled', 'receivable-due', 'receivable-overdue', 'server-disk', 'sync-failed', 'vat-reserve',
     ])
         ->and(AlertRule::query()->where('is_active', false)->pluck('key')->all())->toBe([]);
 });

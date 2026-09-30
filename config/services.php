@@ -37,6 +37,14 @@ return [
         'user_id' => env('LINE_USER_ID'),
     ],
 
+    'ssm' => [
+        /*
+         * AWS Systems Manager accounts to collect server disk usage from: "profile@region", comma-separated. Profiles
+         * are read from the shared credentials file (docker: ~/.aws mounted read-only at /aws).
+         */
+        'targets' => env('SSM_TARGETS', 'default@ap-northeast-1,EC@ap-northeast-1'),
+    ],
+
     'resend' => [
         'key' => env('RESEND_API_KEY'),
     ],

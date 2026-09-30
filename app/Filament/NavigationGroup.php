@@ -13,6 +13,7 @@ enum NavigationGroup implements HasLabel
     case Finance;
     case Sales;
     case Delivery;
+    case Ops;
     case Reports;
     case Settings;
 
@@ -23,6 +24,7 @@ enum NavigationGroup implements HasLabel
             self::Finance => '財務',
             self::Sales => '業務',
             self::Delivery => '交付',
+            self::Ops => '維運',
             self::Reports => '報告',
             self::Settings => '設定',
         };
