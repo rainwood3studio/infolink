@@ -72,7 +72,21 @@
 - 封存檔都在 `/home/ubuntu/log-archive/`，被移除容器的設定也另存成 JSON 放在這裡。
 - **沒有動**：`storage/app/export`（11G）、`storage/app/import`（3.8G）、`~/dbbackup`、MySQL binlog。
 - ⚠️ scm-app1 容器裡有一個 `vi .env` 從 2025-05-05 開到現在，可能還有沒存檔的修改。請負責人確認後再結束這個行程。
-- ⚠️ scm 的日誌（nginx、laravel.log、容器內 journal、docker 日誌）**都沒有設定輪替**，會慢慢長回來。之後應補 logrotate，並設定 docker 的 log `max-size`。
+- 日誌輪替已於 2026-09-30 補上，見下方「scm 日誌輪替」。
+- ⚠️ **scm-app1 不可重建**：除了 `/home/dev` 之外，程式碼、`.env`、`storage/app`（export、import、public 上傳檔）、nginx 設定都只存在容器內部。`docker restart` 沒問題，但 `docker rm` 或用新設定重建會讓這些檔案全部消失。
+
+### scm 日誌輪替（不重啟容器）
+
+scm-app1 容器裡有 logrotate 設定檔，但沒有安裝 logrotate 程式，所以日誌一直沒有輪替。改由主機負責：
+
+| 設定 | 內容 |
+| --- | --- |
+| `/usr/local/bin/scm-app-logrotate.sh`（repo 原始檔：`scripts/scm/scm-app-logrotate.sh`） | 透過容器的 overlay merged 目錄，從主機輪替容器內的 nginx `access.log`、`error.log`、`laravel.log`（每天或超過 200M，保留 14 份）與 `redis-server.log`（每週或超過 200M，保留 4 份）。一律使用 copytruncate，服務不用重啟 |
+| `/etc/cron.d/scm-app-logrotate` | 每小時第 5 分執行，超過大小上限也能及時輪替。紀錄在 `/var/log/scm-app-logrotate.log` |
+| `/etc/logrotate.d/docker-containers` | 主機上所有 docker json 日誌：每天或超過 100M 輪替，保留 7 份，使用 copytruncate。不改 docker 的 `max-size`，因為那需要重建容器 |
+| `/etc/systemd/journald.conf.d/size.conf` | 主機 journal 上限 500M（`SystemMaxUse`） |
+
+如果 scm-app1 將來被重建，腳本會自動抓新的目錄，不需要修改。
 
 ## 3. scm 資料庫每日備份
 
@@ -110,10 +124,12 @@ aws s3 cp s3://scm-db-backup-625240399201/scm/scm-YYYYMMDD-HHMM.sql.gz .
 
 ## 4. 待辦
 
-- [ ] 確認第一次完整備份（2026-10-01 03:00）成功：看紀錄檔與 S3，記下耗時與檔案大小
-- [ ] 完整備份成功後清理 binlog：`PURGE BINARY LOGS BEFORE NOW() - INTERVAL 7 DAY`，並用 `SET PERSIST binlog_expire_logs_seconds = 604800` 把保留期改成 7 天，約可釋出 20G
+- [x] 第一次完整備份（2026-09-30 09:51 手動執行）：7 分 43 秒，1.5G，已上傳 S3
+- [x] 清理 binlog（2026-09-30）：27 個 26.8G 降到 8 個 7.7G；已用 `SET PERSIST` 把 `binlog_expire_logs_seconds` 改成 604800（7 天）。scm 從 71% 降到 51%
 - [ ] 做一次還原測試，還原到暫時的容器
 - [ ] 在 infolink 加警示：S3 上最新的備份超過 26 小時就通知
-- [ ] scm 補上日誌輪替：logrotate（nginx、laravel.log）與 docker log `max-size`
+- [x] scm 日誌輪替（2026-09-30）：由主機跑 logrotate，容器沒有重啟，也沒有重建
+- [ ] 把 scm-app1 容器內的檔案納入備份：`storage/app/public`（上傳檔）與 `.env`。目前只有 MySQL 有備份
+- [ ] 長期：把 scm-app1 的 `storage` 改成掛載到主機上。需要重建一次容器，要找維護時段和 SCM 負責人一起做
 - [ ] 請負責人處理 scm-app1 裡 2025-05 開著的 `vi .env`
 - [ ] 請 SCM 負責人確認 `storage/app/export`、`storage/app/import`（約 15G）能不能清
