@@ -16,6 +16,7 @@ enum SyncJob: string implements HasColor, HasLabel
     case VaultTasks = 'vault_tasks';
     case Rules = 'rules';
     case ServerDisks = 'server_disks';
+    case GithubActivity = 'github_activity';
 
     public function getLabel(): string
     {
@@ -26,6 +27,7 @@ enum SyncJob: string implements HasColor, HasLabel
             self::VaultTasks => 'vault 待辦',
             self::Rules => '規則',
             self::ServerDisks => '伺服器硬碟',
+            self::GithubActivity => 'GitHub 活動',
         };
     }
 
@@ -38,6 +40,7 @@ enum SyncJob: string implements HasColor, HasLabel
             self::VaultTasks => 'gray',
             self::Rules => 'gray',
             self::ServerDisks => 'gray',
+            self::GithubActivity => 'info',
         };
     }
 }

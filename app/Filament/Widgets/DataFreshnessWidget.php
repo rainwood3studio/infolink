@@ -33,20 +33,23 @@ class DataFreshnessWidget extends Widget
     public function getSources(): array
     {
         return [
-            $this->redmine(),
+            $this->syncSource(SyncJob::RedmineIssues, 'Redmine'),
+            $this->syncSource(SyncJob::GithubActivity, 'GitHub'),
             $this->bank(),
             $this->dailyBrief(),
         ];
     }
 
     /**
+     * Last successful run of a sync job; a failure after it shows the failure with when it last succeeded.
+     *
      * @return array{label:string, value:string, color:string, icon:?string, hint:?string}
      */
-    protected function redmine(): array
+    protected function syncSource(SyncJob $job, string $label): array
     {
-        $latest = SyncRun::latestFor(SyncJob::RedmineIssues);
-        $lastOk = $latest?->status === SyncStatus::Ok ? $latest : SyncRun::latestFor(SyncJob::RedmineIssues, SyncStatus::Ok);
-        $source = ['label' => 'Redmine', 'value' => '尚未同步', 'color' => 'gray', 'icon' => null, 'hint' => null];
+        $latest = SyncRun::latestFor($job);
+        $lastOk = $latest?->status === SyncStatus::Ok ? $latest : SyncRun::latestFor($job, SyncStatus::Ok);
+        $source = ['label' => $label, 'value' => '尚未同步', 'color' => 'gray', 'icon' => null, 'hint' => null];
 
         if ($latest?->status === SyncStatus::Failed) {
             return [

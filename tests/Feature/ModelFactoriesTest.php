@@ -7,6 +7,11 @@ use App\Models\CashForecast;
 use App\Models\CostBaseline;
 use App\Models\Deal;
 use App\Models\DealEvent;
+use App\Models\Developer;
+use App\Models\GithubBranch;
+use App\Models\GithubCommit;
+use App\Models\GithubPullRequest;
+use App\Models\GithubReview;
 use App\Models\Insight;
 use App\Models\MetricValue;
 use App\Models\Project;
@@ -30,6 +35,11 @@ test('every factory persists a valid record', function (string $model) {
     Insight::class,
     Deal::class,
     DealEvent::class,
+    Developer::class,
+    GithubBranch::class,
+    GithubCommit::class,
+    GithubPullRequest::class,
+    GithubReview::class,
 ]);
 
 test('the taxed amount is derived from the untaxed amount and tax rate', function () {

@@ -18,6 +18,19 @@ return [
         'key' => env('POSTMARK_API_KEY'),
     ],
 
+    'github' => [
+        'token' => env('GITHUB_TOKEN'),
+        /*
+         * Comma-separated organisations to mirror; empty means every organisation the token's user belongs to.
+         */
+        'orgs' => env('GITHUB_ORGS', ''),
+        /*
+         * Rolling window: only activity from this many months ago on is synced; older rows are pruned every run.
+         */
+        'retention_months' => (int) env('GITHUB_RETENTION_MONTHS', 1),
+        'timeout' => (int) env('GITHUB_TIMEOUT', 30),
+    ],
+
     'redmine' => [
         'url' => env('REDMINE_URL'),
         'key' => env('REDMINE_API_KEY'),
