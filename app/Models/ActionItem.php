@@ -45,10 +45,53 @@ class ActionItem extends Model
     }
 
     /**
+     * The name of the person using the app (config infolink.owner_name); a blank `owner` means them too.
+     */
+    public static function ownerName(): string
+    {
+        return trim((string) config('infolink.owner_name', 'Kenneth'));
+    }
+
+    /**
+     * Whether the item is the app owner's own: no owner, or the owner name (case-insensitive).
+     */
+    public function isMine(): bool
+    {
+        $owner = trim((string) $this->owner);
+
+        return $owner === '' || mb_strtolower($owner) === mb_strtolower(self::ownerName());
+    }
+
+    /**
      * @param  Builder<static>  $query
      */
     public function scopePending(Builder $query): void
     {
         $query->whereIn('status', [ActionItemStatus::Todo, ActionItemStatus::Doing, ActionItemStatus::Waiting]);
+    }
+
+    /**
+     * Items the app owner has to do themselves (see {@see isMine()}).
+     *
+     * @param  Builder<static>  $query
+     */
+    public function scopeMine(Builder $query): void
+    {
+        $query->where(fn (Builder $query) => $query
+            ->whereNull('owner')
+            ->orWhereRaw("trim(owner) = ''")
+            ->orWhereRaw('lower(trim(owner)) = ?', [mb_strtolower(self::ownerName())]));
+    }
+
+    /**
+     * Items handed to someone else.
+     *
+     * @param  Builder<static>  $query
+     */
+    public function scopeDelegated(Builder $query): void
+    {
+        $query->whereNotNull('owner')
+            ->whereRaw("trim(owner) <> ''")
+            ->whereRaw('lower(trim(owner)) <> ?', [mb_strtolower(self::ownerName())]);
     }
 }

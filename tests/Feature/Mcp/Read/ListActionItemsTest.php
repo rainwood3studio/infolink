@@ -33,7 +33,9 @@ test('list_action_items lists pending items by due date with related records', f
         ->assertSee([
             '"total":3',
             '"title":"寄出我識尾款發票"',
-            '"priority":"p1","status":"todo","due_on":"2026-09-24","days_overdue":2,"owner":"Kenneth","related_type":"insight","related_id":'.$this->insight->id,
+            '"priority":"p1","status":"todo","due_on":"2026-09-24","days_overdue":2,"owner":"Kenneth","is_mine":true,"related_type":"insight","related_id":'.$this->insight->id,
+            '"owner":"裕樺","is_mine":false',
+            '"owner":null,"is_mine":true',
             '"external_key":"invoice-wushi"',
         ])
         ->assertDontSee('已完成的事');
@@ -59,6 +61,21 @@ test('list_action_items filters by status, due date, owner and insight', functio
 
     InfolinkServer::actingAs($user)->tool(ListActionItems::class, ['insight_id' => $this->insight->id])
         ->assertSee(['寄出我識尾款發票', '"total":1']);
+});
+
+test('list_action_items separates mine from delegated', function () {
+    $user = mcpUser(['read']);
+
+    InfolinkServer::actingAs($user)->tool(ListActionItems::class, ['ownership' => 'mine'])
+        ->assertSee(['"ownership":"mine"', '"total":2', '寄出我識尾款發票', '沒有期限的事'])
+        ->assertDontSee('整理驗證中議題');
+
+    InfolinkServer::actingAs($user)->tool(ListActionItems::class, ['ownership' => 'delegated'])
+        ->assertSee(['"total":1', '整理驗證中議題'])
+        ->assertDontSee('寄出我識尾款發票');
+
+    InfolinkServer::actingAs($user)->tool(ListActionItems::class, ['ownership' => 'everyone'])
+        ->assertHasErrors();
 });
 
 test('list_action_items is empty without items', function () {

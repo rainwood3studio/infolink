@@ -95,7 +95,7 @@ class UpdateActionItem extends WriteTool
             'priority' => $schema->string()->enum(self::enumValues(ActionItemPriority::class)),
             'status' => $schema->string()->enum(self::enumValues(ActionItemStatus::class))->description('done = finished; dropped = no longer needed.'),
             'due_on' => $schema->string()->format('date')->nullable()->description('YYYY-MM-DD, or null to clear.'),
-            'owner' => $schema->string()->nullable(),
+            'owner' => $schema->string()->nullable()->description('Delegate by setting a colleague name (as in dev_activity_summary → developers); null or Kenneth = his own.'),
             'notes' => $schema->string()->nullable(),
         ];
     }

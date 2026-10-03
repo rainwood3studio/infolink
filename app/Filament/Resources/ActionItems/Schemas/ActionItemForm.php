@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\ActionItems\Schemas;
 
+use App\Domain\Work\ActionItemService;
 use App\Enums\ActionItemPriority;
 use App\Enums\ActionItemStatus;
 use App\Filament\Resources\ActionItems\ActionItemResource;
@@ -44,9 +45,11 @@ class ActionItemForm
                             ->required(),
                         DatePicker::make('due_on')
                             ->label('到期日'),
-                        TextInput::make('owner')
+                        Select::make('owner')
                             ->label('負責人')
-                            ->maxLength(255),
+                            ->options(fn (?ActionItem $record): array => self::ownerOptions($record?->owner))
+                            ->default(ActionItem::ownerName())
+                            ->helperText('選同事＝交辦；留空視為自己。'),
                         TextEntry::make('related')
                             ->label('關聯')
                             ->state(fn (?ActionItem $record): ?string => ActionItemResource::relatedLabel($record))
@@ -60,5 +63,22 @@ class ActionItemForm
                     ->columns(2),
                 SourceFields::section(),
             ]);
+    }
+
+    /**
+     * The owner name plus the active developers; a record's current owner stays selectable even when it is not
+     * (or no longer) on that list.
+     *
+     * @return array<string, string>
+     */
+    public static function ownerOptions(?string $current = null): array
+    {
+        $owners = app(ActionItemService::class)->owners();
+
+        if (filled($current) && ! in_array($current, $owners, true)) {
+            $owners[] = $current;
+        }
+
+        return array_combine($owners, $owners);
     }
 }

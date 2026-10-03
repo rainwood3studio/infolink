@@ -24,7 +24,11 @@ abstract class InfolinkPrompt extends Prompt
         - **fingerprint 命名**：`<類別>-<對象>:<識別>`，前綴小寫英數，例如
           `receivable-overdue:長照-期中款`、`receivable-due:我識-尾款`、`cash-low:2026-11`、`delivery-stalled:tcsb-5f-b2c`、`delivery-offflow:tcsb-5f-b2c`、`sales-no-next-action:多羅滿賞鯨`。
         - 問題已經不存在（款項已入帳、議題已處理）→ `resolve_insight`，附上原因 `note`。
-        - 需要有人**動手做的事** → 先 `list_action_items` 查重，再 `create_action_item` 並用 `insight_id` 連回 insight；做完的用 `update_action_item`（status: done）。
+        - 需要有人**動手做的事** → 先 `list_action_items`（預設列出所有未完成的）再決定：
+          - **同一件事已經有待辦** → `update_action_item` 改它（補說明、改期 `due_on`、調優先度），**不要**另建一筆內容相近的；做完的設 status: done。
+          - **待辦已經太多** → 未完成超過 10 筆，或逾期（`days_overdue` > 0）超過 5 筆時，**不要再 `create_action_item`**。改在報告最上面寫明「待辦已堆積 N 筆（逾期 M 筆），本次不新增」，並建議哪幾筆該放棄（dropped）、哪幾筆該交辦給誰。
+          - 確定是新的事 → `create_action_item`，用 `insight_id` 連回 insight。
+        - **待辦的 `owner` 是人名**：不填＝Kenneth 自己做；該由同事做的就填同事的名字（名單看 `dev_activity_summary` 的 `developers`），app 會把它列在「已交辦」。`is_mine: false` 的待辦不是 Kenneth 的工作，報告裡要寫出負責人。
         - 完整的**分析文字** → `save_report`（Markdown，`metrics_snapshot` 放引用的指標值）。
         - **不要刪資料**：只能 resolve、dismiss 或把待辦設為 dropped。
         - 所有寫入都冪等，重跑同一份分析不會產生重複資料；不確定時寧可重跑，不要換新的 key 或 fingerprint。

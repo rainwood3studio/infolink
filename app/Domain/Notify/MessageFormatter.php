@@ -75,6 +75,11 @@ class MessageFormatter
         return $this->adminUrl("reports/{$report->getKey()}");
     }
 
+    public function actionItemsUrl(): string
+    {
+        return $this->adminUrl('action-items');
+    }
+
     /**
      * Up to `$limit` heading / list-item lines of a Markdown document, stripped to plain text. Headings become
      * 「■ …」 and list items 「• …」. A document without either yields its first plain lines instead.

@@ -18,8 +18,8 @@ use Laravel\Mcp\Server\Attributes\Name;
 #[Description(<<<'TEXT'
 List action items (things someone needs to do), ordered by due date (undated last), then priority (p1 highest). ALWAYS call this before create_action_item to avoid duplicates.
 By default only pending items (status todo, doing or waiting). `status` also accepts done, dropped, all.
-Filters: `due_before` (YYYY-MM-DD, inclusive: due on or before that date; undated items are excluded), `owner` (partial match), `insight_id` (items linked to that insight).
-Fields: `due_on`, `days_overdue` (days past due_on for pending items, else 0), `owner`, `related_type`/`related_id` (the record it came from, e.g. insight 12), `external_key` (idempotency key for create_action_item), `completed_at`.
+Filters: `due_before` (YYYY-MM-DD, inclusive: due on or before that date; undated items are excluded), `owner` (partial match), `ownership` (`mine` = Kenneth's own, `delegated` = handed to a colleague), `insight_id` (items linked to that insight).
+Fields: `due_on`, `days_overdue` (days past due_on for pending items, else 0), `owner` (a person's name; null = Kenneth), `is_mine` (true when the owner is blank or Kenneth; false = delegated to a colleague), `related_type`/`related_id` (the record it came from, e.g. insight 12), `external_key` (idempotency key for create_action_item), `completed_at`.
 `total` is the number of matching items; at most `limit` (default 100, max 300) are returned.
 TEXT)]
 class ListActionItems extends ReadTool
@@ -29,6 +29,10 @@ class ListActionItems extends ReadTool
     public const string STATUS_PENDING = 'pending';
 
     public const string STATUS_ALL = 'all';
+
+    public const string OWNERSHIP_MINE = 'mine';
+
+    public const string OWNERSHIP_DELEGATED = 'delegated';
 
     public const int DEFAULT_LIMIT = 100;
 
@@ -44,6 +48,7 @@ class ListActionItems extends ReadTool
             'status' => ['nullable', 'in:'.implode(',', self::statuses())],
             'due_before' => ['nullable', 'date'],
             'owner' => ['nullable', 'string', 'max:255'],
+            'ownership' => ['nullable', 'in:'.self::OWNERSHIP_MINE.','.self::OWNERSHIP_DELEGATED],
             'insight_id' => ['nullable', 'integer'],
             'limit' => ['nullable', 'integer', 'min:1', 'max:'.self::MAX_LIMIT],
         ]);
@@ -55,6 +60,8 @@ class ListActionItems extends ReadTool
             ->when(! in_array($status, [self::STATUS_PENDING, self::STATUS_ALL], true), fn (Builder $query) => $query->where('status', $status))
             ->when($validated['due_before'] ?? null, fn (Builder $query, string $date) => $query->whereNotNull('due_on')->whereDate('due_on', '<=', $date))
             ->when(filled($validated['owner'] ?? null), fn (Builder $query) => $query->whereLike('owner', '%'.$validated['owner'].'%'))
+            ->when(($validated['ownership'] ?? null) === self::OWNERSHIP_MINE, fn (Builder $query) => $query->mine())
+            ->when(($validated['ownership'] ?? null) === self::OWNERSHIP_DELEGATED, fn (Builder $query) => $query->delegated())
             ->when($validated['insight_id'] ?? null, fn (Builder $query, int|string $insightId) => $query
                 ->where('related_type', (new Insight)->getMorphClass())
                 ->where('related_id', (int) $insightId));
@@ -74,6 +81,7 @@ class ListActionItems extends ReadTool
                 'status' => $status,
                 'due_before' => $validated['due_before'] ?? null,
                 'owner' => $validated['owner'] ?? null,
+                'ownership' => $validated['ownership'] ?? null,
                 'insight_id' => $validated['insight_id'] ?? null,
             ], filled(...)),
             'total' => $total,
@@ -102,6 +110,9 @@ class ListActionItems extends ReadTool
                 ->description('Only items due on or before this date (YYYY-MM-DD).'),
             'owner' => $schema->string()
                 ->description('Partial match on owner.'),
+            'ownership' => $schema->string()
+                ->enum([self::OWNERSHIP_MINE, self::OWNERSHIP_DELEGATED])
+                ->description('`mine` = owner blank or Kenneth; `delegated` = owned by a colleague.'),
             'insight_id' => $schema->integer()
                 ->description('Only items linked to this insight.'),
             'limit' => $schema->integer()->min(1)->max(self::MAX_LIMIT)

@@ -44,7 +44,9 @@ class ActionItemsTable
                     ->sortable(),
                 TextColumn::make('owner')
                     ->label('負責人')
-                    ->placeholder('—')
+                    ->state(fn (ActionItem $record): string => filled($record->owner) ? $record->owner : ActionItem::ownerName())
+                    ->badge()
+                    ->color(fn (ActionItem $record): string => $record->isMine() ? 'gray' : 'info')
                     ->toggleable(),
                 TextColumn::make('completed_at')
                     ->label('完成時間')
@@ -66,6 +68,14 @@ class ActionItemsTable
                 SelectFilter::make('priority')
                     ->label('優先度')
                     ->options(ActionItemPriority::class),
+                SelectFilter::make('ownership')
+                    ->label('負責人')
+                    ->options(['mine' => '我的', 'delegated' => '已交辦'])
+                    ->query(fn (Builder $query, array $data): Builder => match ($data['value'] ?? null) {
+                        'mine' => $query->mine(),
+                        'delegated' => $query->delegated(),
+                        default => $query,
+                    }),
             ])
             ->recordActions([
                 ActionItemActions::complete(),

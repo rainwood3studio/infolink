@@ -26,7 +26,8 @@ use Illuminate\Support\Collection;
  *   (an escalation of the same row clears `notified_at` and pushes again);
  * - warning insight: bell only (the daily brief summarises it);
  * - info insight: nothing;
- * - report with `notify`: bell right away, LINE summary now or — in quiet hours — deferred to when they end.
+ * - report with `notify`: bell right away, LINE summary now or — in quiet hours — deferred to when they end;
+ * - anything else (the morning to-do digest): {@see sendLineOrDefer()}, same quiet-hours rule.
  *
  * Every attempt is written to `notification_logs`. `notified_at` is claimed atomically before sending, so
  * concurrent jobs for the same record never double-push.
@@ -172,6 +173,20 @@ class Notifier
         }
 
         return $this->finish($log, NotificationStatus::Sent);
+    }
+
+    /**
+     * Push a LINE message that belongs to no insight or report (e.g. the morning to-do digest): right away, or —
+     * in quiet hours — logged as deferred for {@see flushDeferred()} to send when they end.
+     */
+    public function sendLineOrDefer(string $text): NotificationLog
+    {
+        if ($this->quietHours->contains(now())) {
+            return $this->log(NotificationChannel::Line, NotificationStatus::Deferred, ['text' => $text],
+                deliverAfter: $this->quietHours->endAfter(now()));
+        }
+
+        return $this->sendLine($text);
     }
 
     /**

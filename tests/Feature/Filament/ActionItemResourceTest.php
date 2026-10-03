@@ -7,8 +7,10 @@ use App\Filament\Resources\ActionItems\Pages\CreateActionItem;
 use App\Filament\Resources\ActionItems\Pages\EditActionItem;
 use App\Filament\Resources\ActionItems\Pages\ListActionItems;
 use App\Models\ActionItem;
+use App\Models\Developer;
 use App\Models\User;
 use Filament\Actions\Testing\TestAction;
+use Filament\Forms\Components\Select;
 use Livewire\Livewire;
 
 beforeEach(function () {
@@ -39,7 +41,49 @@ it('creates an action item', function () {
         ->title->toBe('寄出我識尾款發票')
         ->priority->toBe(ActionItemPriority::P1)
         ->due_on->toDateString()->toBe('2026-10-15')
+        ->owner->toBe('Kenneth')
         ->source->toBe(Source::Manual);
+});
+
+it('offers the owner and the active developers as owner, and delegates on save', function () {
+    Developer::factory()->create(['name' => '裕樺']);
+    Developer::factory()->create(['name' => '離職的人', 'is_active' => false]);
+
+    Livewire::test(CreateActionItem::class)
+        ->assertFormFieldExists('owner', fn (Select $field): bool => $field->getOptions() === ['Kenneth' => 'Kenneth', '裕樺' => '裕樺'])
+        ->assertFormSet(['owner' => 'Kenneth'])
+        ->fillForm(['title' => '整理驗證中議題', 'owner' => '裕樺'])
+        ->call('create')
+        ->assertHasNoFormErrors();
+
+    expect(ActionItem::sole())->owner->toBe('裕樺')->isMine()->toBeFalse();
+});
+
+it('keeps an owner that is not on the list selectable when editing', function () {
+    $item = ActionItem::factory()->create(['owner' => '外包小陳']);
+
+    Livewire::test(EditActionItem::class, ['record' => $item->getRouteKey()])
+        ->assertFormFieldExists('owner', fn (Select $field): bool => $field->getOptions() === ['Kenneth' => 'Kenneth', '外包小陳' => '外包小陳'])
+        ->fillForm(['title' => '改過的標題'])
+        ->call('save')
+        ->assertHasNoFormErrors();
+
+    expect($item->refresh())->title->toBe('改過的標題')->owner->toBe('外包小陳');
+});
+
+it('filters the table by mine and delegated', function () {
+    $mine = ActionItem::factory()->create(['owner' => 'Kenneth']);
+    $unowned = ActionItem::factory()->create(['owner' => null]);
+    $delegated = ActionItem::factory()->create(['owner' => '裕樺']);
+
+    Livewire::test(ListActionItems::class)
+        ->assertCanSeeTableRecords([$mine, $unowned, $delegated])
+        ->filterTable('ownership', 'mine')
+        ->assertCanSeeTableRecords([$mine, $unowned])
+        ->assertCanNotSeeTableRecords([$delegated])
+        ->filterTable('ownership', 'delegated')
+        ->assertCanSeeTableRecords([$delegated])
+        ->assertCanNotSeeTableRecords([$mine, $unowned]);
 });
 
 it('edits an action item and stamps completion when marked done', function () {

@@ -39,7 +39,7 @@ START HERE. The whole company picture in one call; use the other tools only to d
 - `finance` (null until bank data exists): `balance` (latest bank balance), `monthly_cost` (recurring monthly cost baseline), `runway_months` (balance ÷ monthly_cost, ignoring receivables), `ar_outstanding_taxed` (high-confidence, non-recurring, tax-inclusive), `ar_low_confidence_taxed`, `ar_overdue_taxed`, `forecast_year_end` and `forecast_min_90d` (lowest forecast month-end balance in the next 90 days; the forecast only counts high-confidence receivables). Details: get_cash_position.
 - `delivery`: Redmine mirror stock — open, by_status, verifying split (acceptor = 文豪's normal acceptance queue; others = 驗證中 assigned to someone else, i.e. off the acceptance flow; unassigned), stalled_30d/90d, overdue, unassigned, and `top_projects` (5 largest by open issues). All acceptance is done by 文豪, so closed counts are not team throughput. Details: redmine_summary.
 - `sales`: the open pipeline — `open_count`, `amount_total` and `weighted_total` (untaxed; weighted = amount × probability), `by_stage` (lead/proposal/negotiation: count, amount, weighted) and `no_next_action` (open deals whose next action is missing or past: id, party, title, stage, weighted_amount, next_action, next_action_on). Details: list_deals.
-- `attention`: the 「今天要處理」 list in order — unresolved critical then warning insights (`type` insight, `id`, `fingerprint`, `severity`), then pending action items due today or overdue (`type` action_item, `id`, `priority`, `due_on`, `days_overdue`).
+- `attention`: the 「今天要處理」 list in order — unresolved critical then warning insights (`type` insight, `id`, `fingerprint`, `severity`), then pending action items due today or overdue, whoever owns them (`type` action_item, `id`, `priority`, `due_on`, `days_overdue`, `owner`, `is_mine` — false = delegated to a colleague; the dashboard lists those under 已交辦).
 - `open_insights_by_severity`: counts of unresolved insights (open + acknowledged) per severity, including info.
 - `overdue_receivables` and `upcoming_receivables` (expected in the next 30 days): outstanding receivables incl. recurring fees (`is_recurring`), with `untaxed`/`taxed` amounts, `confidence` and `days_overdue`.
 - `closing_projects`: projects in 結案 (closing) status with `target_close_date`, `days_left` (negative = past target) and `open_issues` (open issues in the linked Redmine project; null if not linked).
@@ -231,6 +231,7 @@ class GetBriefing extends ReadTool
             'due_on' => static::date($item->dueOn),
             'days_overdue' => (int) $item->dueOn?->diffInDays(today()),
             'owner' => $item->model->owner,
+            'is_mine' => $item->model->isMine(),
         ];
     }
 

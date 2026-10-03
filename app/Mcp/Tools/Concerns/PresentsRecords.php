@@ -133,6 +133,7 @@ trait PresentsRecords
             'due_on' => static::date($actionItem->due_on),
             'days_overdue' => $isPending && $actionItem->due_on?->lt(today()) ? (int) $actionItem->due_on->diffInDays(today()) : 0,
             'owner' => $actionItem->owner,
+            'is_mine' => $actionItem->isMine(),
             'related_type' => $actionItem->related_type === null ? null : Str::snake(class_basename($actionItem->related_type)),
             'related_id' => $actionItem->related_id,
             'completed_at' => static::dateTime($actionItem->completed_at),

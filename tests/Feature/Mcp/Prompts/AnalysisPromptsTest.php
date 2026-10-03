@@ -39,6 +39,42 @@ test('every prompt carries the write-back rules and domain caveats', function (s
         ]);
 })->with([DailyBrief::class, WeeklyCompanyReview::class, MonthEndFinance::class]);
 
+test('every prompt tells Claude to reuse action items and to stop adding when they pile up', function (string $prompt) {
+    InfolinkServer::actingAs(mcpUser())
+        ->prompt($prompt)
+        ->assertOk()
+        ->assertSee([
+            '同一件事已經有待辦',
+            '`update_action_item` 改它',
+            '未完成超過 10 筆，或逾期（`days_overdue` > 0）超過 5 筆時，**不要再 `create_action_item`**',
+            '待辦的 `owner` 是人名',
+            '`dev_activity_summary` 的 `developers`',
+        ]);
+})->with([DailyBrief::class, WeeklyCompanyReview::class, MonthEndFinance::class]);
+
+test('daily-brief takes stock of pending action items before creating any', function () {
+    InfolinkServer::actingAs(mcpUser())
+        ->prompt(DailyBrief::class)
+        ->assertSee([
+            '先盤點待辦再動手',
+            '未完成超過 10 筆或逾期超過 5 筆 → 今天**不新增待辦**',
+            '待辦已堆積 N 筆（逾期 M 筆），今天不新增',
+            '建議放棄（dropped）與建議交辦（給誰）',
+            '還沒有對應待辦的 → `create_action_item`',
+        ]);
+});
+
+test('weekly-company-review names every action item overdue by more than a week with a recommendation', function () {
+    InfolinkServer::actingAs(mcpUser())
+        ->prompt(WeeklyCompanyReview::class)
+        ->assertSee([
+            '逾期超過 7 天',
+            '`days_overdue` > 7',
+            '逐筆點名',
+            '**做**（本週，寫哪一天）／**延**（新日期）／**交辦**（給誰）／**放棄**',
+        ]);
+});
+
 test('daily-brief defaults to today and accepts a date', function () {
     InfolinkServer::actingAs(mcpUser())
         ->prompt(DailyBrief::class)

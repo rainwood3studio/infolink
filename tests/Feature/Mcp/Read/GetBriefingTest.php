@@ -94,7 +94,7 @@ test('get_briefing assembles the whole picture', function () {
             '"verifying":{"acceptor":1,"others":0,"unassigned":0}',
             // attention
             '"attention":[{"type":"insight","id":'.$critical->id.',"fingerprint":"receivable-overdue:長照-期中款","severity":"critical"',
-            '{"type":"action_item","id":'.$actionItem->id.',"priority":"p1","title":"寄出我識尾款發票","due_on":"2026-09-24","days_overdue":2,"owner":"Kenneth"}',
+            '{"type":"action_item","id":'.$actionItem->id.',"priority":"p1","title":"寄出我識尾款發票","due_on":"2026-09-24","days_overdue":2,"owner":"Kenneth","is_mine":true}',
             '"open_insights_by_severity":{"critical":1,"warning":1,"info":1}',
             // receivables
             '"overdue_receivables":[{"id":',

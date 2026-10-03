@@ -4,6 +4,18 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Owner
+    |--------------------------------------------------------------------------
+    |
+    | The name of the person using this app. Action items whose `owner` is blank or equal to this name
+    | (case-insensitive) are "mine"; anything else counts as delegated to a colleague.
+    |
+    */
+
+    'owner_name' => env('INFOLINK_OWNER_NAME', 'Kenneth'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Notifications
     |--------------------------------------------------------------------------
     |
