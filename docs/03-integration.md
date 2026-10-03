@@ -146,6 +146,7 @@ AI 分析跑在**主機**上（launchd），不在容器裡：Claude CLI 的登�
 | 排程 | 時間 | 做什麼 |
 | --- | --- | --- |
 | 每日簡報 | 週一～五 08:30 | `get_briefing` → 找出今天要注意的 3–5 件事 → `raise_insight` / `create_action_item` → `save_report(type: daily_brief, notify: true)` |
+| 開發活動分析 | 週一～五 08:45 | `dev_activity_summary`（前一個工作日＋近 7 天，含前 7 天比較）→ 每人做了什麼、趨勢與 2–4 點建議 → `save_report(type: dev_review)`；顯示在「交付 → 開發活動」頁最上方 |
 | 每週營運回顧 | 週一 09:00 | 上週 Redmine 週報＋財務＋業務，跟上週報告比較 → `save_report(type: weekly_company, notify: true)`，並寫入 vault |
 | 月結 | 每月 2 日 09:00 | 月度財務指標、推估準確度（上月推估 vs 實際） |
 

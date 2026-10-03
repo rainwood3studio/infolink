@@ -4,8 +4,10 @@ namespace App\Filament\Pages;
 
 use App\Domain\Engineering\DevActivityReport;
 use App\Domain\Engineering\GithubSync;
+use App\Enums\ReportType;
 use App\Enums\SyncStatus;
 use App\Filament\NavigationGroup;
+use App\Models\Report;
 use BackedEnum;
 use Carbon\CarbonImmutable;
 use Filament\Actions\Action;
@@ -138,6 +140,7 @@ class DevActivity extends Page
 
         return [
             'hasData' => true,
+            'analysis' => Report::query()->where('type', ReportType::DevReview)->latest('period_start')->latest('id')->first(),
             'periods' => DevActivityReport::PERIODS,
             'from' => $from,
             'to' => $to,

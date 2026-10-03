@@ -60,6 +60,7 @@
         </x-filament::section>
     @else
         <div class="da-body" wire:loading.delay.attr="data-loading" style="display: flex; flex-direction: column; gap: 1.5rem;">
+            @include('filament.pages.dev-activity.analysis', ['analysis' => $analysis])
             @include('filament.pages.dev-activity.people', ['people' => $people])
             @include('filament.pages.dev-activity.heatmap', ['heatmap' => $heatmap, 'heatmapIsTrailing' => $heatmapIsTrailing, 'weekdays' => $weekdays])
             @include('filament.pages.dev-activity.log', ['log' => $log, 'dayLabel' => $dayLabel])

@@ -1,7 +1,7 @@
 #!/bin/bash
 # Scheduled Claude analysis for the INFOLINK ops hub (docs/03-integration.md §5, §6).
 #
-# Usage: scripts/claude-analysis.sh [--dry-run] <daily-brief|weekly-company-review|month-end-finance>
+# Usage: scripts/claude-analysis.sh [--dry-run] <daily-brief|dev-activity-review|weekly-company-review|month-end-finance>
 #
 # Flow: lock → make sure the app is up (start Docker/compose if not) → fetch the MCP prompt text from the app
 # (prompts/get, which also proves the MCP token works before any tokens are spent) → run `claude -p` inside the
@@ -44,12 +44,12 @@ for arg in "$@"; do
     case "$arg" in
         --dry-run) DRY_RUN=1 ;;
         -h|--help) sed -n '2,20p' "$0"; exit 0 ;;
-        daily-brief|weekly-company-review|month-end-finance) JOB="$arg" ;;
+        daily-brief|dev-activity-review|weekly-company-review|month-end-finance) JOB="$arg" ;;
         *) echo "unknown argument: $arg" >&2; exit 2 ;;
     esac
 done
 if [[ -z "$JOB" ]]; then
-    echo "usage: $0 [--dry-run] <daily-brief|weekly-company-review|month-end-finance>" >&2
+    echo "usage: $0 [--dry-run] <daily-brief|dev-activity-review|weekly-company-review|month-end-finance>" >&2
     exit 2
 fi
 
@@ -152,6 +152,10 @@ case "$JOB" in
     daily-brief)
         PROMPT_ARGS="{\"date\":\"$(date '+%Y-%m-%d')\"}"
         PERIOD_DESC="今天（$(date '+%Y-%m-%d')）"
+        ;;
+    dev-activity-review)
+        PROMPT_ARGS="{\"date\":\"$(date '+%Y-%m-%d')\"}"
+        PERIOD_DESC="前一個工作日與近 7 天（分析日 $(date '+%Y-%m-%d')）"
         ;;
     weekly-company-review)
         # Any day inside last week; the prompt resolves it to that week's Monday.

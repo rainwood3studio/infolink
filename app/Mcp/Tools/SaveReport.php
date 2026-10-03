@@ -14,7 +14,7 @@ use Laravel\Mcp\Server\Attributes\Description;
 use Laravel\Mcp\Server\Attributes\Name;
 
 #[Name('save_report')]
-#[Description('Save a narrative report (Markdown) with the metric values it cites. Periodic types (daily_brief, weekly_redmine, weekly_company, monthly_finance) are one per period: period_start is normalised (weekly → Monday, monthly → 1st) and saving again for the same type + period overwrites the report. adhoc reports are upserted by external_key when given, otherwise always new. notify=true asks the app to push a summary (the app decides channel and dedup).')]
+#[Description('Save a narrative report (Markdown) with the metric values it cites. Periodic types (daily_brief, dev_review, weekly_redmine, weekly_company, monthly_finance) are one per period: period_start is normalised (weekly → Monday, monthly → 1st) and saving again for the same type + period overwrites the report. adhoc reports are upserted by external_key when given, otherwise always new. notify=true asks the app to push a summary (the app decides channel and dedup).')]
 class SaveReport extends WriteTool
 {
     use WriteToolHelpers;

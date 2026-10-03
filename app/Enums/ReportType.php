@@ -14,6 +14,7 @@ enum ReportType: string implements HasColor, HasLabel
     case WeeklyRedmine = 'weekly_redmine';
     case WeeklyCompany = 'weekly_company';
     case MonthlyFinance = 'monthly_finance';
+    case DevReview = 'dev_review';
     case Adhoc = 'adhoc';
 
     public function getLabel(): string
@@ -23,6 +24,7 @@ enum ReportType: string implements HasColor, HasLabel
             self::WeeklyRedmine => 'Redmine 週報',
             self::WeeklyCompany => '公司週回顧',
             self::MonthlyFinance => '月結財務',
+            self::DevReview => '開發活動分析',
             self::Adhoc => '臨時分析',
         };
     }
@@ -34,6 +36,7 @@ enum ReportType: string implements HasColor, HasLabel
             self::WeeklyRedmine => 'warning',
             self::WeeklyCompany => 'success',
             self::MonthlyFinance => 'primary',
+            self::DevReview => 'info',
             self::Adhoc => 'gray',
         };
     }

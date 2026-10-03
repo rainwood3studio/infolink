@@ -1,6 +1,7 @@
 <?php
 
 use App\Mcp\Prompts\DailyBrief;
+use App\Mcp\Prompts\DevActivityReview;
 use App\Mcp\Prompts\MonthEndFinance;
 use App\Mcp\Prompts\WeeklyCompanyReview;
 use App\Mcp\Servers\InfolinkServer;
@@ -80,3 +81,24 @@ test('prompts reject malformed arguments', function (string $prompt, array $argu
     'week' => [WeeklyCompanyReview::class, ['week' => 'last'], 'week must be a date inside the week'],
     'month' => [MonthEndFinance::class, ['month' => '2026-9'], 'month must be YYYY-MM.'],
 ]);
+
+test('dev-activity-review focuses on the previous workday and saves a dev_review report', function () {
+    InfolinkServer::actingAs(mcpUser())
+        ->prompt(DevActivityReview::class)
+        ->assertOk()
+        ->assertSee([
+            '開發活動分析：2026-09-28',
+            'dev_activity_summary',
+            '`from: 2026-09-21`、`to: 2026-09-27`',
+            '重點日是 **2026-09-25**',
+            'type: dev_review',
+            'period_start: 2026-09-28',
+            'notify: false',
+            '行數不能比較人',
+            'dev-untracked:<人名>',
+        ]);
+
+    InfolinkServer::actingAs(mcpUser())
+        ->prompt(DevActivityReview::class, ['date' => '2026-10-01'])
+        ->assertSee(['重點日是 **2026-09-30**', 'period_start: 2026-10-01']);
+});

@@ -4,7 +4,8 @@
 # Usage: scripts/install-launchd.sh             install / reinstall all agents (idempotent)
 #        scripts/install-launchd.sh --uninstall  unload and remove them
 #
-# Agents: tw.infolink.daily-brief (Mon–Fri 08:30), tw.infolink.weekly-review (Mon 09:00),
+# Agents: tw.infolink.daily-brief (Mon–Fri 08:30), tw.infolink.dev-review (Mon–Fri 08:45),
+#         tw.infolink.weekly-review (Mon 09:00),
 #         tw.infolink.month-end (day 2, 09:00). All call scripts/claude-analysis.sh.
 
 set -euo pipefail
@@ -14,7 +15,7 @@ SRC_DIR="${SCRIPT_DIR}/launchd"
 AGENTS_DIR="${HOME}/Library/LaunchAgents"
 LOG_DIR="${HOME}/Library/Logs/infolink"
 DOMAIN="gui/$(id -u)"
-LABELS=(tw.infolink.daily-brief tw.infolink.weekly-review tw.infolink.month-end)
+LABELS=(tw.infolink.daily-brief tw.infolink.dev-review tw.infolink.weekly-review tw.infolink.month-end)
 
 bootout() {
     local label="$1"

@@ -15,7 +15,7 @@ use Laravel\Mcp\Server\Attributes\Name;
 
 #[Name('list_reports')]
 #[Description(<<<'TEXT'
-List saved reports (newest period first) without their bodies: `id`, `type` (daily_brief, weekly_redmine, weekly_company, monthly_finance, adhoc), `title`, `period_start`/`period_end` (dates; weekly periods start on Monday), `excerpt` (first ~200 characters of the Markdown body as plain text) and `created_at`.
+List saved reports (newest period first) without their bodies: `id`, `type` (daily_brief, dev_review, weekly_redmine, weekly_company, monthly_finance, adhoc), `title`, `period_start`/`period_end` (dates; weekly periods start on Monday), `excerpt` (first ~200 characters of the Markdown body as plain text) and `created_at`.
 Use it to find last week's / last month's report to compare against, then fetch the full text with get_report.
 `from`/`to` filter on period_start (inclusive). `limit` defaults to 10 (max 100).
 TEXT)]

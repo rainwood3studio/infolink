@@ -1,6 +1,7 @@
 <?php
 
 use App\Domain\Engineering\GithubSync;
+use App\Enums\ReportType;
 use App\Enums\SyncJob;
 use App\Enums\SyncStatus;
 use App\Filament\Pages\DevActivity;
@@ -10,6 +11,7 @@ use App\Models\GithubCommit;
 use App\Models\GithubIdentity;
 use App\Models\GithubRepo;
 use App\Models\RedmineIssue;
+use App\Models\Report;
 use App\Models\SyncRun;
 use App\Models\User;
 use Carbon\CarbonImmutable;
@@ -129,4 +131,25 @@ it('shows GitHub freshness on the dashboard bar', function () {
 
     expect(collect(Livewire::test(DataFreshnessWidget::class)->instance()->getSources())->firstWhere('label', 'GitHub'))
         ->toMatchArray(['value' => '5 分鐘前', 'color' => 'success']);
+});
+
+it('shows the latest AI analysis above the cards, escaping raw HTML', function () {
+    seedDevActivity();
+    Report::factory()->create(['type' => ReportType::DevReview, 'period_start' => '2026-10-01', 'body' => '舊的分析']);
+    Report::factory()->create([
+        'type' => ReportType::DevReview,
+        'period_start' => '2026-10-02',
+        'body' => "昨天兩人都有進度。\n\n## 建議\n\n- 請在 commit 加上議題編號 <script>alert(1)</script>",
+    ]);
+
+    Livewire::test(DevActivity::class)
+        ->assertSeeInOrder(['AI 分析建議', '10/02 產生', '昨天兩人都有進度', '建議', '請在 commit 加上議題編號', '碰過的議題'])
+        ->assertDontSee('舊的分析')
+        ->assertDontSeeHtml('<script>alert(1)</script>');
+});
+
+it('explains when no AI analysis exists yet', function () {
+    seedDevActivity();
+
+    Livewire::test(DevActivity::class)->assertSee(['AI 分析建議', '還沒有分析']);
 });
