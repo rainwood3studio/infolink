@@ -5,6 +5,7 @@
 #        scripts/install-launchd.sh --uninstall  unload and remove them
 #
 # Agents: tw.infolink.daily-brief (Mon–Fri 08:30), tw.infolink.dev-review (Mon–Fri 08:45),
+#         tw.infolink.advisor (Mon–Fri 08:55),
 #         tw.infolink.weekly-review (Mon 09:00),
 #         tw.infolink.month-end (day 2, 09:00). All call scripts/claude-analysis.sh.
 
@@ -15,7 +16,7 @@ SRC_DIR="${SCRIPT_DIR}/launchd"
 AGENTS_DIR="${HOME}/Library/LaunchAgents"
 LOG_DIR="${HOME}/Library/Logs/infolink"
 DOMAIN="gui/$(id -u)"
-LABELS=(tw.infolink.daily-brief tw.infolink.dev-review tw.infolink.weekly-review tw.infolink.month-end)
+LABELS=(tw.infolink.daily-brief tw.infolink.dev-review tw.infolink.advisor tw.infolink.weekly-review tw.infolink.month-end)
 
 bootout() {
     local label="$1"

@@ -62,14 +62,14 @@ class ReportService
         return match ($type) {
             ReportType::WeeklyRedmine, ReportType::WeeklyCompany => $date->startOfWeek(CarbonInterface::MONDAY),
             ReportType::MonthlyFinance => $date->startOfMonth(),
-            ReportType::DailyBrief, ReportType::DevReview, ReportType::Adhoc => $date,
+            ReportType::DailyBrief, ReportType::DevReview, ReportType::Advisor, ReportType::Adhoc => $date,
         };
     }
 
     protected function defaultPeriodEnd(ReportType $type, CarbonImmutable $periodStart): ?CarbonImmutable
     {
         return match ($type) {
-            ReportType::DailyBrief, ReportType::DevReview => $periodStart,
+            ReportType::DailyBrief, ReportType::DevReview, ReportType::Advisor => $periodStart,
             ReportType::WeeklyRedmine, ReportType::WeeklyCompany => $periodStart->addDays(6),
             ReportType::MonthlyFinance => $periodStart->endOfMonth()->startOfDay(),
             ReportType::Adhoc => null,

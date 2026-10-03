@@ -43,6 +43,7 @@ Token 在 Filament「設定 → API Tokens」產生，每個呼叫者一把（`c
 | `redmine_summary` | 交付面摘要（讀 app 的鏡像，不打 Redmine） | 存量、本週流入／流出、驗證中依 assignee 拆分、停滯、逾期、未指派；各專案排行 |
 | `closing_projects` | 結案中專案的作戰板 | 每案未結議題依「卡在誰」分四段（未指派／開發中／驗證中‧非驗收者／等驗收）、掛著的未收應收、14 天走勢、近期每日淨消化與推估結案日 |
 | `acceptance_queue` | 驗收隊列 | 驗收者名下的驗證中議題：依專案與等待天數、每週驗收 vs 送驗 vs 驗收者 commit 數、清空週數、建議驗收順序、流程外清單 |
+| `revenue_outlook` | 未來 12 個月收入展望 | 每月專案應收／經常性收入／假設續約／加權業務機會／成本、三條月底餘額線、每月缺口、現金高點與歸零月份；可帶 `delay_months`（尾款延後）與 `include_low_confidence`；點名缺金額／成交日的業務機會 |
 | `dev_activity_summary` | GitHub 開發活動＋每人 Redmine 產出 | 每人 commit／議題／送驗／驗收，近 7 天對比前 7 天，每日 commit 標題 |
 | `list_insights` / `list_action_items` | 查現有洞察與待辦 | 預設只列 open，**Claude 寫新的之前先查，避免重複** |
 | `get_report` / `list_reports` | 讀過去的報告 | 寫週報時比較上週 |
@@ -150,6 +151,7 @@ AI 分析跑在**主機**上（launchd），不在容器裡：Claude CLI 的登�
 | --- | --- | --- |
 | 每日簡報 | 週一～五 08:30 | `get_briefing` → 找出今天要注意的 3–5 件事 → `raise_insight` / `create_action_item` → `save_report(type: daily_brief, notify: true)` |
 | 開發活動分析 | 週一～五 08:45 | `dev_activity_summary`（前一個工作日＋近 7 天，含前 7 天比較）→ 每人做了什麼、趨勢與 2–4 點建議 → `save_report(type: dev_review)`；顯示在「交付 → 開發活動」頁最上方 |
+| AI 顧問分析 | 週一～五 08:55 | 六個面向（現金與收款、收入展望與業務、結案專案、驗收與交付流程、團隊產出、待辦／資料／系統）逐一呼叫工具 → 每個面向的燈號與一句話、最重要的三件事、現況／要注意／建議 → `save_report(type: advisor)`；顯示在「AI 顧問」頁。不建立 insight／待辦（那是每日簡報的工作） |
 | 每週營運回顧 | 週一 09:00 | 上週 Redmine 週報＋財務＋業務，跟上週報告比較 → `save_report(type: weekly_company, notify: true)`，並寫入 vault |
 | 月結 | 每月 2 日 09:00 | 月度財務指標、推估準確度（上月推估 vs 實際） |
 

@@ -15,6 +15,7 @@ enum ReportType: string implements HasColor, HasLabel
     case WeeklyCompany = 'weekly_company';
     case MonthlyFinance = 'monthly_finance';
     case DevReview = 'dev_review';
+    case Advisor = 'advisor';
     case Adhoc = 'adhoc';
 
     public function getLabel(): string
@@ -25,6 +26,7 @@ enum ReportType: string implements HasColor, HasLabel
             self::WeeklyCompany => '公司週回顧',
             self::MonthlyFinance => '月結財務',
             self::DevReview => '開發活動分析',
+            self::Advisor => 'AI 顧問分析',
             self::Adhoc => '臨時分析',
         };
     }
@@ -37,6 +39,7 @@ enum ReportType: string implements HasColor, HasLabel
             self::WeeklyCompany => 'success',
             self::MonthlyFinance => 'primary',
             self::DevReview => 'info',
+            self::Advisor => 'primary',
             self::Adhoc => 'gray',
         };
     }

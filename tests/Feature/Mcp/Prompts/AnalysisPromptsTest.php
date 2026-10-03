@@ -1,5 +1,6 @@
 <?php
 
+use App\Mcp\Prompts\CompanyAdvisor;
 use App\Mcp\Prompts\DailyBrief;
 use App\Mcp\Prompts\DevActivityReview;
 use App\Mcp\Prompts\MonthEndFinance;
@@ -101,4 +102,25 @@ test('dev-activity-review focuses on the previous workday and saves a dev_review
     InfolinkServer::actingAs(mcpUser())
         ->prompt(DevActivityReview::class, ['date' => '2026-10-01'])
         ->assertSee(['重點日是 **2026-09-30**', 'period_start: 2026-10-01']);
+});
+
+test('company-advisor walks every area and saves an advisor report without writing insights', function () {
+    InfolinkServer::actingAs(mcpUser())
+        ->prompt(CompanyAdvisor::class)
+        ->assertOk()
+        ->assertSee([
+            'AI 顧問分析：2026-09-28',
+            'get_cash_position',
+            'revenue_outlook',
+            'closing_projects',
+            'acceptance_queue',
+            'dev_activity_summary',
+            'list_action_items',
+            'type: advisor',
+            'period_start: 2026-09-28',
+            'notify: false',
+            '`cash`（現金與收款）、`revenue`（收入展望與業務）、`closing`（結案專案）、`acceptance`（驗收與交付流程）、`team`（團隊產出）、`operations`（待辦、資料與系統）',
+            '**不要** `raise_insight`',
+            '文豪',
+        ]);
 });
