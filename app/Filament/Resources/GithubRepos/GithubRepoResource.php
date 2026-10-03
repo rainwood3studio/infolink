@@ -14,7 +14,8 @@ use Illuminate\Database\Eloquent\Model;
 use UnitEnum;
 
 /**
- * GitHub repo: the mirrored repositories, each optionally tied to a company project inline.
+ * GitHub repo: the mirrored repositories, each optionally tied inline to a company project or a deal, with per-branch
+ * project overrides (the mapping behind 專案損益).
  */
 class GithubRepoResource extends Resource
 {

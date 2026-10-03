@@ -56,7 +56,7 @@ class CompanyAdvisor extends InfolinkPrompt
            - `revenue` 收入展望與業務：`revenue_outlook`（每月缺口、現金高點、開始下滑與歸零月份；再用 `delay_months: 2` 看尾款延後的情況）、`list_deals`（缺金額／預計成交日／下一步日期的機會要點名）。
            - `closing` 結案專案：`closing_projects`（每案卡在誰、推估結案日 vs 目標日、掛著的應收）。
            - `acceptance` 驗收與交付流程：`acceptance_queue`（隊列大小、每週驗收 vs 送驗、清空週數、流程外）、`redmine_summary`（淨流量、停滯、未指派）。
-           - `team` 團隊產出：`dev_activity_summary`（每人近 7 天 vs 前 7 天、Redmine 送驗／驗收、沒掛議題的 commit）。
+           - `team` 團隊產出：`dev_activity_summary`（每人近 7 天 vs 前 7 天、Redmine 送驗／驗收、沒掛議題的 commit）、`project_pnl`（近 30 天人力花在哪個客戶與專案、對比收入；尚未簽約的投入；投入最多卻沒有對應收入的專案要點名）。
            - `operations` 待辦、資料與系統：`list_action_items`（逾期多久、都掛在誰名下）、`list_insights`（open 的 critical／warning，含伺服器硬碟、同步失敗、簡報未產生）、資料新鮮度。
         3. `list_reports`（`type: advisor`，最近 2 份）＋ `get_report` 讀前一份：指出**跟上次比變好或變壞的地方**，上次的建議有沒有被執行。沒有前一份就略過。
         4. 排出**最重要的三件事**：跨面向挑選，以對現金與結案的影響排序。每件都要具體到「誰、做什麼、什麼時候前」，並說明不做會怎樣。寧可少而準，不要湊數。

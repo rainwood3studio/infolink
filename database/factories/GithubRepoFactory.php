@@ -3,6 +3,7 @@
 namespace Database\Factories;
 
 use App\Models\GithubRepo;
+use App\Models\Project;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -27,7 +28,19 @@ class GithubRepoFactory extends Factory
             'is_archived' => false,
             'pushed_at' => now(),
             'project_id' => null,
+            'deal_id' => null,
+            'branch_projects' => null,
             'last_synced_at' => now(),
         ];
+    }
+
+    /**
+     * Commits first seen on `$branch` belong to `$project` instead of the repo's own project.
+     */
+    public function branchProject(string $branch, Project $project): static
+    {
+        return $this->state(fn (array $attributes): array => [
+            'branch_projects' => [...($attributes['branch_projects'] ?? []), ['branch' => $branch, 'project_id' => $project->id]],
+        ]);
     }
 }

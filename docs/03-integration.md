@@ -45,6 +45,7 @@ Token 在 Filament「設定 → API Tokens」產生，每個呼叫者一把（`c
 | `acceptance_queue` | 驗收隊列 | 驗收者名下的驗證中議題：依專案與等待天數、每週驗收 vs 送驗 vs 驗收者 commit 數、清空週數、建議驗收順序、流程外清單 |
 | `revenue_outlook` | 未來 12 個月收入展望 | 每月專案應收／經常性收入／假設續約／加權業務機會／成本、三條月底餘額線、每月缺口、現金高點與歸零月份；可帶 `delay_months`（尾款延後）與 `include_low_confidence`；點名缺金額／成交日的業務機會 |
 | `dev_activity_summary` | GitHub 開發活動＋每人 Redmine 產出 | 每人 commit／議題／送驗／驗收，近 7 天對比前 7 天，每日 commit 標題 |
+| `project_pnl` | 專案損益與人力投入（近 7–31 天，預設 30） | 每專案／客戶的投入人天（一人一天有 commit 算一個人天，當天碰幾個專案就平分）、估算成本（月成本依人天比例攤，只是估算）、期間收入與每月維運費、估算差額、合約金額、已收／未收、Redmine 工時；尚未簽約的投入（指定給業務機會的 repo）；沒對應到專案的 repo；缺合約金額／Redmine 連結的專案 |
 | `list_insights` / `list_action_items` | 查現有洞察與待辦 | 預設只列 open，**Claude 寫新的之前先查，避免重複** |
 | `get_report` / `list_reports` | 讀過去的報告 | 寫週報時比較上週 |
 | `run_readonly_sql` | ad-hoc 分析 | 用 `infolink_ro` 角色，只能讀 `v_*` view，限時 10 秒、最多 500 列 |
