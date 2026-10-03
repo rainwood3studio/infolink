@@ -6,7 +6,7 @@
 <div style="display: flex; flex-direction: column; gap: 0.75rem;">
     <div style="display: flex; align-items: baseline; gap: 0.75rem;">
         <h2 style="font-size: 1rem; font-weight: 600;">每日工作日誌</h2>
-        <span class="da-muted" style="font-size: 0.8125rem;">每天 → 每人 → 每個 repo；議題標籤連到 Redmine，短 sha 連到 GitHub。</span>
+        <span class="da-muted" style="font-size: 0.8125rem;">每天 → 每人 → 每個 repo；議題來自 commit 引用與當天在 Redmine 的工時／送驗／結案，短 sha 連到 GitHub。</span>
     </div>
 
     @forelse ($log as $index => $day)
@@ -21,7 +21,14 @@
                             <div style="display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.25rem 0.75rem; margin-bottom: 0.5rem;">
                                 <span style="font-weight: 600;">{{ $person['name'] }}</span>
                                 <span class="da-muted" style="font-size: 0.8125rem; font-variant-numeric: tabular-nums;">
-                                    {{ $person['commits'] }} commits · +{{ number_format($person['lines_added']) }} / −{{ number_format($person['lines_deleted']) }}
+                                    @if ($person['commits'] > 0)
+                                        {{ $person['commits'] }} commits · +{{ number_format($person['lines_added']) }} / −{{ number_format($person['lines_deleted']) }}
+                                    @else
+                                        無 commit
+                                    @endif
+                                    @if ($person['redmine_hours'] > 0)
+                                        · Redmine 工時 {{ rtrim(rtrim(number_format($person['redmine_hours'], 1), '0'), '.') }}h
+                                    @endif
                                 </span>
                             </div>
 
@@ -38,6 +45,7 @@
                                 </div>
                             @endif
 
+                            @if ($person['repos'] !== [] || $person['merged_prs'] !== [])
                             <div style="display: flex; flex-direction: column; gap: 0.5rem; padding-left: 0.75rem; border-left: 2px solid color-mix(in oklab, var(--gray-500) 20%, transparent);">
                                 @foreach ($person['repos'] as $repo)
                                     <div>
@@ -83,6 +91,7 @@
                                     </div>
                                 @endif
                             </div>
+                            @endif
                         </div>
                     @endforeach
                 </div>
@@ -90,7 +99,7 @@
         </div>
     @empty
         <x-filament::section compact>
-            <span class="da-muted">這段期間沒有 commit 或 merge 的 PR。</span>
+            <span class="da-muted">這段期間沒有 commit、merge 的 PR 或 Redmine 活動。</span>
         </x-filament::section>
     @endforelse
 </div>

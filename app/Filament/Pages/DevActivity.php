@@ -4,6 +4,7 @@ namespace App\Filament\Pages;
 
 use App\Domain\Engineering\DevActivityReport;
 use App\Domain\Engineering\GithubSync;
+use App\Domain\Engineering\RedmineActivity;
 use App\Enums\ReportType;
 use App\Enums\SyncStatus;
 use App\Filament\NavigationGroup;
@@ -40,7 +41,7 @@ class DevActivity extends Page
 
     protected string $view = 'filament.pages.dev-activity.index';
 
-    protected ?string $subheading = 'commit 數不含 merge；行數已排除 lock 檔與產生的檔案，僅供參考。「解了什麼」請看各 commit 掛的 Redmine 議題。';
+    protected ?string $subheading = 'commit 數不含 merge；行數已排除 lock 檔與產生的檔案，僅供參考。「解了什麼」看 Redmine 議題：commit 引用的，加上每人在 Redmine 的工時、送驗與結案（依「開發者」設定的 Redmine 名稱對應）。';
 
     #[Url]
     public string $period = DevActivityReport::DEFAULT_PERIOD;
@@ -146,6 +147,7 @@ class DevActivity extends Page
             'to' => $to,
             'personOptions' => $personOptions,
             'people' => $report->people($from, $to),
+            'redmineTrackedSince' => ($trackedSince = app(RedmineActivity::class)->statusTrackedSince()) !== null && $trackedSince->gt($from) ? $trackedSince : null,
             'heatmap' => $report->heatmap($heatmapFrom, $to, $this->person),
             'heatmapIsTrailing' => $heatmapFrom->notEqualTo($from),
             'log' => $report->dailyLog($from, $to, $this->person),

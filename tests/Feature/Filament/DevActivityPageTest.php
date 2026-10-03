@@ -11,6 +11,8 @@ use App\Models\GithubCommit;
 use App\Models\GithubIdentity;
 use App\Models\GithubRepo;
 use App\Models\RedmineIssue;
+use App\Models\RedmineStatusChange;
+use App\Models\RedmineTimeEntry;
 use App\Models\Report;
 use App\Models\SyncRun;
 use App\Models\User;
@@ -92,7 +94,7 @@ it('reads the period and person from the query string', function () {
     Livewire::withQueryParams(['period' => 'last_week', 'person' => "dev:{$yuwen->id}"])
         ->test(DevActivity::class)
         ->assertSet('period', 'last_week')
-        ->assertSee('這段期間沒有 commit 或 merge 的 PR');
+        ->assertSee('這段期間沒有 commit、merge 的 PR 或 Redmine 活動');
 
     Livewire::withQueryParams(['period' => 'bogus'])
         ->test(DevActivity::class)
@@ -152,4 +154,18 @@ it('explains when no AI analysis exists yet', function () {
     seedDevActivity();
 
     Livewire::test(DevActivity::class)->assertSee(['AI 分析建議', '還沒有分析']);
+});
+
+it('shows each developer\'s Redmine work on the card and in the daily log', function () {
+    ['yuwen' => $yuwen] = seedDevActivity();
+    $yuwen->update(['redmine_name' => '鈺文']);
+    RedmineIssue::factory()->create(['id' => 2810, 'subject' => '進站彈窗公告', 'status' => '驗證中']);
+    RedmineTimeEntry::factory()->create(['user_name' => '鈺文', 'issue_id' => 2810, 'hours' => 2.5, 'spent_on' => '2026-10-01']);
+    RedmineStatusChange::factory()->create(['issue_id' => 2810, 'to_status' => '驗證中', 'previous_assignee_name' => '鈺文', 'changed_at' => '2026-10-01 17:00']);
+    SyncRun::factory()->create(['job' => SyncJob::RedmineIssues, 'status' => SyncStatus::Ok, 'started_at' => '2026-09-30 09:00']);
+
+    Livewire::test(DevActivity::class)
+        ->assertSeeInOrder(['鈺文', 'Redmine', '工時', '2.5h', '送驗', '1', '名下未結'])
+        ->assertSee('Redmine 的送驗／結案／驗收從 09/30 開始記錄')
+        ->assertSeeInOrder(['10/01（四）', '鈺文', '無 commit', 'Redmine 工時 2.5h', '#2810', '進站彈窗公告']);
 });

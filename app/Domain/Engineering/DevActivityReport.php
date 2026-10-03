@@ -11,11 +11,13 @@ use App\Models\GithubReview;
 use App\Models\RedmineIssue;
 use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
 
 /**
  * Read model behind 開發活動: GitHub commits, pull requests and reviews grouped by person (a Developer, or an
- * identity not mapped to one yet). Merge commits are excluded everywhere; lines use the effective counts when
+ * identity not mapped to one yet), joined with what the developer did in Redmine ({@see RedmineActivity}, matched
+ * by `developers.redmine_name`). Merge commits are excluded everywhere; lines use the effective counts when
  * present. Everything is aggregated in PHP so it behaves the same on sqlite and Postgres (volumes are small).
  * Dates are calendar days in the app timezone.
  */
@@ -38,6 +40,13 @@ class DevActivityReport
 
     /** @var array<int, array{id:int, subject:string, status:string, is_closed:bool, url:string}> */
     protected array $issueCache = [];
+
+    protected RedmineActivity $redmine;
+
+    public function __construct(?RedmineActivity $redmine = null)
+    {
+        $this->redmine = $redmine ?? new RedmineActivity;
+    }
 
     /**
      * Inclusive start/end of a period key (unknown keys fall back to 本週). Weeks start on Monday.
@@ -69,9 +78,11 @@ class DevActivityReport
 
     /**
      * Per-person summary for the period, most commits first. Active developers are always listed (possibly with
-     * zeros); inactive developers and unmapped identities only when they did something.
+     * zeros); inactive developers and unmapped identities only when they did something. `issues` counts distinct
+     * Redmine issues referenced by their commits/PRs or worked on in Redmine (hours, handed to 驗證中, closed);
+     * `redmine` is null for people without a `redmine_name`.
      *
-     * @return Collection<int, array{key:string, name:string, is_unmapped:bool, active_days:int, commits:int, lines_added:int, lines_deleted:int, prs_opened:int, prs_merged:int, reviews:int, issues:int, type_mix:array<string, int>, ai_assisted_ratio:?float, repos:array<string, int>, last_commit_at:?CarbonInterface}>
+     * @return Collection<int, array{key:string, name:string, is_unmapped:bool, active_days:int, commits:int, lines_added:int, lines_deleted:int, prs_opened:int, prs_merged:int, reviews:int, issues:int, type_mix:array<string, int>, ai_assisted_ratio:?float, repos:array<string, int>, last_commit_at:?CarbonInterface, redmine:?array{redmine_name:string, is_acceptor:bool, hours:float, hours_days:int, issues:int, advanced_to_verify:int, closed_without_verify:int, accepted:?int, open_assigned:int, verifying_assigned:int, stalled_30d:int}}>
      */
     public function people(CarbonImmutable $from, CarbonImmutable $to): Collection
     {
@@ -83,10 +94,14 @@ class DevActivityReport
             ->whereBetween('submitted_at', [$from, $to])
             ->get();
 
+        $developers = Developer::query()->get();
+        $redmine = $this->redmine->forDevelopers($developers, $from, $to);
+
         $existingIssues = $this->existingIssueIds(
             $commits->pluck('redmine_issue_ids')
                 ->merge($openedPrs->pluck('redmine_issue_ids'))
                 ->merge($mergedPrs->pluck('redmine_issue_ids'))
+                ->merge(array_column($redmine, 'issue_ids'))
                 ->flatten()
         );
 
@@ -121,8 +136,21 @@ class DevActivityReport
             $rows[$row($review->identity)]['reviews']++;
         }
 
-        Developer::query()->where('is_active', true)->get()->each(function (Developer $developer) use (&$rows): void {
-            $rows['dev:'.$developer->id] ??= ['key' => 'dev:'.$developer->id, 'name' => $developer->name, 'is_unmapped' => false, 'commit_list' => collect(), 'prs_opened' => 0, 'prs_merged' => 0, 'reviews' => 0, 'issue_ids' => []];
+        $developers->each(function (Developer $developer) use (&$rows, $redmine, $existingIssues): void {
+            $key = 'dev:'.$developer->id;
+            $activity = $redmine[$developer->id] ?? null;
+
+            if ($developer->is_active || ($activity !== null && $activity['by_day'] !== [])) {
+                $rows[$key] ??= ['key' => $key, 'name' => $developer->name, 'is_unmapped' => false, 'commit_list' => collect(), 'prs_opened' => 0, 'prs_merged' => 0, 'reviews' => 0, 'issue_ids' => []];
+            }
+
+            if (isset($rows[$key]) && $activity !== null) {
+                $rows[$key]['issue_ids'] = [...$rows[$key]['issue_ids'], ...$activity['issue_ids']];
+                $rows[$key]['redmine'] = [
+                    ...Arr::except($activity, ['issue_ids', 'by_day']),
+                    'issues' => count(array_intersect($activity['issue_ids'], $existingIssues)),
+                ];
+            }
         });
 
         return collect($rows)
@@ -147,6 +175,7 @@ class DevActivityReport
                     'ai_assisted_ratio' => $count > 0 ? $list->where('is_ai_assisted', true)->count() / $count : null,
                     'repos' => $list->countBy(fn (GithubCommit $commit): string => $commit->repo->name)->sortDesc()->take(3)->all(),
                     'last_commit_at' => $list->max('authored_at'),
+                    'redmine' => $row['redmine'] ?? null,
                 ];
             })
             ->sort(fn (array $a, array $b): int => [$b['commits'], $b['prs_merged'] + $b['reviews'], $a['is_unmapped'], $a['name']]
@@ -186,24 +215,42 @@ class DevActivityReport
 
     /**
      * Day by day (newest first), person by person: the commits grouped by repo, the Redmine issues they touched
-     * and the pull requests that got merged.
+     * (referenced by commits/PRs, or worked on in Redmine that day) and the pull requests that got merged. A
+     * developer with only Redmine activity on a day is listed too.
      *
-     * @return Collection<int, array{date:string, commits:int, people:list<array{key:string, name:string, is_unmapped:bool, commits:int, lines_added:int, lines_deleted:int, repos:list<array{name:string, full_name:string, url:string, commits:list<array<string, mixed>>}>, issues:list<array{id:int, subject:string, status:string, is_closed:bool, url:string}>, merged_prs:list<array<string, mixed>>}>}>
+     * @return Collection<int, array{date:string, commits:int, people:list<array{key:string, name:string, is_unmapped:bool, commits:int, redmine_hours:float, lines_added:int, lines_deleted:int, repos:list<array{name:string, full_name:string, url:string, commits:list<array<string, mixed>>}>, issues:list<array{id:int, subject:string, status:string, is_closed:bool, url:string}>, merged_prs:list<array<string, mixed>>}>}>
      */
     public function dailyLog(CarbonImmutable $from, CarbonImmutable $to, ?string $personKey = null): Collection
     {
         $commits = $this->commits($from, $to);
         $mergedPrs = $this->pullRequests('merged_at', $from, $to);
-        $this->loadIssues($commits->pluck('redmine_issue_ids')->merge($mergedPrs->pluck('redmine_issue_ids'))->flatten());
+        $developers = Developer::query()->get()->keyBy('id');
+        $redmine = $this->redmine->forDevelopers($developers->values(), $from, $to);
+        $this->loadIssues(
+            $commits->pluck('redmine_issue_ids')
+                ->merge($mergedPrs->pluck('redmine_issue_ids'))
+                ->merge(array_column($redmine, 'issue_ids'))
+                ->flatten()
+        );
 
         /** @var array<string, array<string, array<string, mixed>>> $days */
         $days = [];
         $entry = function (string $date, ?GithubIdentity $identity) use (&$days): string {
             $person = $this->person($identity);
-            $days[$date][$person['key']] ??= [...$person, 'commit_list' => [], 'merged_prs' => [], 'issue_ids' => []];
+            $days[$date][$person['key']] ??= [...$person, 'commit_list' => [], 'merged_prs' => [], 'issue_ids' => [], 'redmine_hours' => 0.0];
 
             return $person['key'];
         };
+
+        foreach ($redmine as $developerId => $activity) {
+            $key = 'dev:'.$developerId;
+
+            foreach ($activity['by_day'] as $date => $day) {
+                $days[$date][$key] ??= ['key' => $key, 'name' => $developers[$developerId]->name, 'is_unmapped' => false, 'commit_list' => [], 'merged_prs' => [], 'issue_ids' => [], 'redmine_hours' => 0.0];
+                $days[$date][$key]['issue_ids'] = $day['issue_ids'];
+                $days[$date][$key]['redmine_hours'] = $day['hours'];
+            }
+        }
 
         foreach ($commits->sortBy('authored_at') as $commit) {
             $date = $this->day($commit->authored_at);
@@ -405,7 +452,7 @@ class DevActivityReport
 
     /**
      * @param  array<string, mixed>  $person
-     * @return array{key:string, name:string, is_unmapped:bool, commits:int, lines_added:int, lines_deleted:int, repos:list<array{name:string, full_name:string, url:string, commits:list<array<string, mixed>>}>, issues:list<array{id:int, subject:string, status:string, is_closed:bool, url:string}>, merged_prs:list<array<string, mixed>>}
+     * @return array{key:string, name:string, is_unmapped:bool, commits:int, redmine_hours:float, lines_added:int, lines_deleted:int, repos:list<array{name:string, full_name:string, url:string, commits:list<array<string, mixed>>}>, issues:list<array{id:int, subject:string, status:string, is_closed:bool, url:string}>, merged_prs:list<array<string, mixed>>}
      */
     protected function personDay(array $person): array
     {
@@ -417,6 +464,7 @@ class DevActivityReport
             'name' => $person['name'],
             'is_unmapped' => $person['is_unmapped'],
             'commits' => $list->count(),
+            'redmine_hours' => (float) $person['redmine_hours'],
             'lines_added' => (int) $list->sum(fn (GithubCommit $commit): int => $commit->linesAdded()),
             'lines_deleted' => (int) $list->sum(fn (GithubCommit $commit): int => $commit->linesDeleted()),
             'repos' => $list

@@ -62,6 +62,9 @@
         <div class="da-body" wire:loading.delay.attr="data-loading" style="display: flex; flex-direction: column; gap: 1.5rem;">
             @include('filament.pages.dev-activity.analysis', ['analysis' => $analysis])
             @include('filament.pages.dev-activity.people', ['people' => $people])
+            @if ($redmineTrackedSince)
+                <p class="da-muted" style="margin-top: -1rem; font-size: 0.75rem;">Redmine 的送驗／結案／驗收從 {{ $redmineTrackedSince->format('m/d') }} 開始記錄，更早的日期沒有資料（不是 0）。</p>
+            @endif
             @include('filament.pages.dev-activity.heatmap', ['heatmap' => $heatmap, 'heatmapIsTrailing' => $heatmapIsTrailing, 'weekdays' => $weekdays])
             @include('filament.pages.dev-activity.log', ['log' => $log, 'dayLabel' => $dayLabel])
             @include('filament.pages.dev-activity.untracked', ['untracked' => $untracked, 'dayLabel' => $dayLabel])

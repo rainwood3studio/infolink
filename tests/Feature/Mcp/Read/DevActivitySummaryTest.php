@@ -7,6 +7,7 @@ use App\Models\GithubCommit;
 use App\Models\GithubIdentity;
 use App\Models\GithubRepo;
 use App\Models\RedmineIssue;
+use App\Models\RedmineTimeEntry;
 
 beforeEach(function () {
     $this->travelTo('2026-10-05 08:45:00');
@@ -14,7 +15,8 @@ beforeEach(function () {
 
 test('dev_activity_summary returns people, the previous window, daily commits and untracked counts', function () {
     $repo = GithubRepo::factory()->create(['name' => 'pos', 'full_name' => 'infolinktw/pos']);
-    $howl = Developer::factory()->create(['name' => 'Howl']);
+    $howl = Developer::factory()->create(['name' => 'Howl', 'redmine_name' => '文豪']);
+    RedmineTimeEntry::factory()->create(['user_name' => '文豪', 'issue_id' => 2881, 'hours' => 1.5, 'spent_on' => '2026-10-01']);
     Developer::factory()->create(['name' => 'Roy', 'notes' => '暫離，2027-01 回來']);
     $identity = GithubIdentity::factory()->for($howl)->create();
     RedmineIssue::factory()->create(['id' => 2881, 'subject' => '作廢要選原因', 'status' => '處理中']);
@@ -36,7 +38,11 @@ test('dev_activity_summary returns people, the previous window, daily commits an
         ->assertSee([
             '"window":{"from":"2026-09-28","to":"2026-10-04","days":7,"previous_from":"2026-09-21","previous_to":"2026-09-27"',
             '"github_activity":{"last_status":null',
-            '{"name":"Roy","is_active":true,"notes":"暫離，2027-01 回來"}',
+            '"redmine_issues":{"last_status":null',
+            '"redmine_status_tracked_since":null',
+            '{"name":"Roy","redmine_name":null,"is_active":true,"notes":"暫離，2027-01 回來"}',
+            '"redmine":{"redmine_name":"文豪","is_acceptor":true,"hours":1.5,"hours_days":1,"advanced_to_verify":0,"closed_without_verify":0,"accepted":0,"open_assigned":',
+            '"date":"2026-10-01","people":[{"name":"Howl","commits":0,"redmine_hours":1.5',
             '"people":[{"name":"Howl","is_unmapped":false,"active_days":2,"commits":2',
             '"previous_people":[{"name":"Howl","is_unmapped":false,"active_days":1,"commits":1',
             '"date":"2026-10-02","people":[{"name":"Howl","commits":1',
