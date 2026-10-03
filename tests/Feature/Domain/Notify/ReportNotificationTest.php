@@ -4,6 +4,7 @@ use App\Domain\Notify\MessageFormatter;
 use App\Domain\Notify\QuietHours;
 use App\Enums\NotificationChannel;
 use App\Enums\NotificationStatus;
+use App\Enums\ReportType;
 use App\Models\NotificationLog;
 use App\Models\Report;
 use App\Models\User;
@@ -150,4 +151,50 @@ test('a body without headings or bullets falls back to its first lines', functio
     $lines = app(MessageFormatter::class)->summaryLines("第一行 **粗體**\n\n第二行 _斜體_ snake_case_name\n第三行", 2);
 
     expect($lines)->toBe(['第一行 粗體', '第二行 斜體 snake_case_name']);
+});
+
+it('pushes the whole one-pager of a weekly review and nothing after the rule', function () {
+    $report = Report::factory()->create([
+        'type' => ReportType::WeeklyCompany,
+        'period_start' => '2026-09-28',
+        'title' => '營運週回顧 2026-W40',
+        'body' => <<<'MD'
+            尾款卡在驗收，**現金**撐得住。
+
+            ## 現金與收款
+            - 餘額 107 萬（9/22）
+            - 逾期應收 47 萬
+
+            ## 本週三件事
+            1. Kenneth 週一前開發票
+
+            ---
+
+            ## 詳細
+            | 表 | 格 |
+            | --- | --- |
+            - 不該推到手機
+            MD,
+    ]);
+
+    $formatter = app(MessageFormatter::class);
+
+    expect($formatter->onePager($report))->toBe("尾款卡在驗收，現金撐得住。\n\n■ 現金與收款\n• 餘額 107 萬（9/22）\n• 逾期應收 47 萬\n\n■ 本週三件事\n• Kenneth 週一前開發票")
+        ->and($formatter->reportText($report))
+        ->toStartWith("📊 營運週回顧 2026-W40\n\n尾款卡在驗收")
+        ->toContain('• Kenneth 週一前開發票')
+        ->not->toContain('不該推到手機')
+        ->toEndWith("http://127.0.0.1:8080/admin/reports/{$report->id}");
+});
+
+it('keeps other reports as a short summary and caps a very long one-pager', function () {
+    $daily = Report::factory()->create(['type' => ReportType::DailyBrief, 'body' => $this->body]);
+    $long = Report::factory()->create(['type' => ReportType::WeeklyCompany, 'body' => str_repeat("- 很長的一行重點內容\n", 600)]);
+
+    $formatter = app(MessageFormatter::class);
+
+    expect($formatter->reportText($daily))->not->toContain('一段說明文字')
+        ->and(mb_strlen($formatter->reportText($daily)))->toBeLessThanOrEqual(MessageFormatter::MAX_MESSAGE_LENGTH)
+        ->and(mb_strlen($formatter->reportText($long)))->toBeLessThanOrEqual(MessageFormatter::ONE_PAGER_MAX_LENGTH)
+        ->and($formatter->reportText($long))->toContain('…');
 });

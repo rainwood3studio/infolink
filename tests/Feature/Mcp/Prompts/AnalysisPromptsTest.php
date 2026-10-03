@@ -160,3 +160,22 @@ test('company-advisor walks every area and saves an advisor report without writi
             '文豪',
         ]);
 });
+
+test('weekly-company-review starts with a one-pager that fits a phone and covers the team', function () {
+    InfolinkServer::actingAs(mcpUser())
+        ->prompt(WeeklyCompanyReview::class)
+        ->assertOk()
+        ->assertSee([
+            '一頁重點',
+            '單獨一行 `---`',
+            '## 現金與收款',
+            '## 結案專案',
+            '## 驗收隊列',
+            '## 每人產出',
+            '## 本週三件事',
+            '不要表格',
+            'dev_activity_summary',
+            'project_pnl',
+            'notify: true',
+        ]);
+});

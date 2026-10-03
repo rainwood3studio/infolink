@@ -3,6 +3,7 @@
 namespace App\Domain\Notify;
 
 use App\Enums\InsightSeverity;
+use App\Enums\ReportType;
 use App\Models\Insight;
 use App\Models\Report;
 
@@ -17,6 +18,11 @@ class MessageFormatter
     public const int MAX_MESSAGE_LENGTH = 1000;
 
     public const int REPORT_SUMMARY_LINES = 5;
+
+    /**
+     * Upper bound for a one-pager pushed in full (the weekly review), still under LINE's 5000.
+     */
+    public const int ONE_PAGER_MAX_LENGTH = 3500;
 
     public const int INSIGHT_EXCERPT_LINES = 3;
 
@@ -60,9 +66,42 @@ class MessageFormatter
         return $lines === [] ? null : implode("\n", $lines);
     }
 
+    /**
+     * The LINE text of a report. A weekly review is pushed as its whole one-pager (it is read on the phone, where
+     * the app itself is not reachable); every other report as a short summary.
+     */
     public function reportText(Report $report): string
     {
+        if ($report->type === ReportType::WeeklyCompany && ($onePager = $this->onePager($report)) !== null) {
+            return $this->compose($this->reportHeadline($report), $onePager, $this->reportUrl($report), self::ONE_PAGER_MAX_LENGTH);
+        }
+
         return $this->compose($this->reportHeadline($report), $this->reportSummary($report), $this->reportUrl($report));
+    }
+
+    /**
+     * The part of the report body before its first horizontal rule (`---`), as plain text that keeps its
+     * structure: headings become 「■ …」 after a blank line, list items 「• …」. Null when that part is empty.
+     */
+    public function onePager(Report $report): ?string
+    {
+        $head = preg_split('/^\h*(?:-{3,}|\*{3,}|_{3,})\h*$/mu', (string) $report->body, 2)[0] ?? '';
+        $lines = [];
+
+        foreach ($this->contentLines($head) as $line) {
+            if (preg_match('/^#{1,6}\s+(.+)$/u', $line, $matches) === 1) {
+                $lines[] = '';
+                $lines[] = '■ '.$this->stripInline($matches[1]);
+            } elseif (preg_match('/^(?:[-*+]|\d+[.)])\s+(?:\[[ xX]\]\s+)?(.+)$/u', $line, $matches) === 1) {
+                $lines[] = '• '.$this->stripInline($matches[1]);
+            } elseif (($plain = $this->stripInline($line)) !== '') {
+                $lines[] = $plain;
+            }
+        }
+
+        $text = trim(implode("\n", $lines));
+
+        return $text === '' ? null : $text;
     }
 
     public function insightUrl(Insight $insight): string
@@ -143,9 +182,9 @@ class MessageFormatter
     }
 
     /**
-     * Headline, optional body and link, capped at {@see MAX_MESSAGE_LENGTH}; only the body is shortened.
+     * Headline, optional body and link, capped at `$maxLength`; only the body is shortened.
      */
-    protected function compose(string $headline, ?string $body, string $url): string
+    protected function compose(string $headline, ?string $body, string $url, int $maxLength = self::MAX_MESSAGE_LENGTH): string
     {
         $headline = $this->truncate($headline, 200);
 
@@ -153,7 +192,7 @@ class MessageFormatter
             return $headline."\n".$url;
         }
 
-        $budget = self::MAX_MESSAGE_LENGTH - mb_strlen($headline) - mb_strlen($url) - 4;
+        $budget = $maxLength - mb_strlen($headline) - mb_strlen($url) - 4;
 
         return $headline."\n\n".$this->truncate($body, $budget)."\n\n".$url;
     }

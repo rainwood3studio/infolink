@@ -155,7 +155,7 @@ AI 分析跑在**主機**上（launchd），不在容器裡：Claude CLI 的登�
 | 每日簡報 | 週一～五 08:30 | `get_briefing` → 找出今天要注意的 3–5 件事 → `raise_insight` / `create_action_item` → `save_report(type: daily_brief, notify: true)` |
 | 開發活動分析 | 週一～五 08:45 | `dev_activity_summary`（前一個工作日＋近 7 天，含前 7 天比較）→ 每人做了什麼、趨勢與 2–4 點建議 → `save_report(type: dev_review)`；顯示在「交付 → 開發活動」頁最上方 |
 | AI 顧問分析 | 週一～五 08:55 | 六個面向（現金與收款、收入展望與業務、結案專案、驗收與交付流程、團隊產出、待辦／資料／系統）逐一呼叫工具 → 每個面向的燈號與一句話、最重要的三件事、現況／要注意／建議 → `save_report(type: advisor)`；顯示在「AI 顧問」頁。不建立 insight／待辦（那是每日簡報的工作） |
-| 每週營運回顧 | 週一 09:00 | 上週 Redmine 週報＋財務＋業務，跟上週報告比較 → `save_report(type: weekly_company, notify: true)`，並寫入 vault |
+| 每週營運回顧 | 週一 09:00 | 上週交付＋財務＋業務＋團隊，跟上週報告比較 → `save_report(type: weekly_company, notify: true)`，並寫入 vault。報告開頭的「一頁重點」（`---` 之前：現金與收款／結案專案／驗收隊列／每人產出／本週三件事）整段轉純文字推到 LINE |
 | 月結 | 每月 2 日 09:00 | 月度財務指標、推估準確度（上月推估 vs 實際） |
 
 **執行方式**（`~/Library/LaunchAgents/tw.infolink.daily-brief.plist` 呼叫腳本）：
