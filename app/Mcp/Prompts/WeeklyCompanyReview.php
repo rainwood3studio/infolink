@@ -36,7 +36,7 @@ class WeeklyCompanyReview extends InfolinkPrompt
 
         1. `get_briefing`：取得現況與資料新鮮度。
         2. **前一週基準**：`get_report`（`type: weekly_company`、`period_start: {$previous}`）。沒有就註明「無上週報告可比較」。
-        3. **交付**：`get_report`（`type: weekly_redmine`、`period_start: {$start}`）若已存在就引用；否則 `redmine_summary`，再用 `query_metrics`（`from: {$start}`、`to: {$end}`）看 `delivery.*` 趨勢。重點：驗證中堆積（文豪 vs 他人）、停滯、逾期、未指派、流入 vs 流出。記住已關閉數＝文豪的驗收量，不是產出。
+        3. **交付**：`get_report`（`type: weekly_redmine`、`period_start: {$start}`）若已存在就引用；否則 `redmine_summary`，加上 `closing_projects`（各結案專案的未結分佈、推估結案日 vs 目標日）與 `acceptance_queue`（驗收隊列、每週驗收 vs 送驗、清空週數），再用 `query_metrics`（`from: {$start}`、`to: {$end}`）看 `delivery.*` 趨勢。重點：驗證中堆積（文豪 vs 他人）、停滯、逾期、未指派、流入 vs 流出。記住已關閉數＝文豪的驗收量，不是產出。
         4. **財務**：`get_cash_position`（餘額、跑道、推估與上一版差異）、`list_receivables`（本週該收未收、逾期、下週到期）。
         5. **業務**：`list_deals`（若可用）——階段變化、沒有下一步的機會。
         6. **寫回**：

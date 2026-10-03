@@ -30,7 +30,7 @@ class DailyBrief extends InfolinkPrompt
         ## 步驟
 
         1. `get_briefing`：一次拿到全貌（釘選指標與變化、超門檻指標、open insights、逾期／近期待辦、未收應收、最新現金推估、資料新鮮度）。資料過期就在報告開頭註明。
-        2. 只在需要細節時補查：`get_cash_position`、`list_receivables`（`overdue_only: true`）、`redmine_summary`、`query_metrics`、`list_insights`、`list_action_items`。
+        2. 只在需要細節時補查：`get_cash_position`、`list_receivables`（`overdue_only: true`）、`redmine_summary`、`closing_projects`（結案中專案：卡在誰、照近期速度何時結得完、掛著多少應收）、`acceptance_queue`（驗收隊列：多大、多久清得完、哪些擋著結案專案）、`query_metrics`、`list_insights`、`list_action_items`。有結案中專案時一定要看 `closing_projects`，引用它的推估結案日，不要自己估。
         3. 挑出**今天要注意的 3–5 件事**，依急迫度排序：逾期或本週到期的收款、現金低點、交付停滯／驗證堆積、到期的待辦、沒有下一步的業務機會。沒事就說沒事，不要湊數。
         4. 每件事照寫回規則處理：
            - 新的或持續中的風險 → `raise_insight`（同一件事沿用同一個 fingerprint）。

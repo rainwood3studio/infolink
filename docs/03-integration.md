@@ -41,6 +41,9 @@ Token 在 Filament「設定 → API Tokens」產生，每個呼叫者一把（`c
 | `get_cash_position` | 現金部位 | 最新餘額、常態月成本、最新推估、與上一版推估的差異 |
 | `list_deals` | 業務機會 | 依階段；標出沒有下一步的 |
 | `redmine_summary` | 交付面摘要（讀 app 的鏡像，不打 Redmine） | 存量、本週流入／流出、驗證中依 assignee 拆分、停滯、逾期、未指派；各專案排行 |
+| `closing_projects` | 結案中專案的作戰板 | 每案未結議題依「卡在誰」分四段（未指派／開發中／驗證中‧非驗收者／等驗收）、掛著的未收應收、14 天走勢、近期每日淨消化與推估結案日 |
+| `acceptance_queue` | 驗收隊列 | 驗收者名下的驗證中議題：依專案與等待天數、每週驗收 vs 送驗 vs 驗收者 commit 數、清空週數、建議驗收順序、流程外清單 |
+| `dev_activity_summary` | GitHub 開發活動＋每人 Redmine 產出 | 每人 commit／議題／送驗／驗收，近 7 天對比前 7 天，每日 commit 標題 |
 | `list_insights` / `list_action_items` | 查現有洞察與待辦 | 預設只列 open，**Claude 寫新的之前先查，避免重複** |
 | `get_report` / `list_reports` | 讀過去的報告 | 寫週報時比較上週 |
 | `run_readonly_sql` | ad-hoc 分析 | 用 `infolink_ro` 角色，只能讀 `v_*` view，限時 10 秒、最多 500 列 |

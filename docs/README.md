@@ -27,6 +27,7 @@
 | [04-metrics-and-dashboard.md](04-metrics-and-dashboard.md) | 指標目錄、警示規則、Filament 頁面與儀表板版面 |
 | [05-roadmap.md](05-roadmap.md) | 分階段實作計畫、每階段驗收標準、待決事項 |
 | [06-servers.md](06-servers.md) | 伺服器維運：SSM 硬碟空間儀表板、清理紀錄、scm 資料庫每日備份 |
+| [07-management-roadmap.md](07-management-roadmap.md) | 2026-10-03 檢視後的管理功能路線圖：先修排程與通知，再做結案作戰、驗收隊列、收入展望、待辦閉環 |
 
 ## 關鍵決策摘要
 
