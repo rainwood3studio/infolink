@@ -72,7 +72,7 @@
 | `external_key` | `sha1(帳號+日期+摘要+金額+餘額)`，重複匯入同一份明細不會重複 |
 
 ### `customers`
-`name`、`short_name`（墊腳石）、`redmine_project_ids`（int[]）、`status`、`notes`。
+`name`、`short_name`（墊腳石）、`redmine_project_ids`（int[]）、`counterparties`（銀行入帳戶名別名，string[]）、`status`、`maintenance_fee_untaxed` / `maintenance_cycle`（`monthly` / `yearly`）/ `maintenance_since` / `maintenance_until`（維護合約，供「客戶收款」頁逐期對帳）、`notes`。
 
 ### `projects`（公司層級的「案子」，不等於 Redmine 專案）
 `customer_id`、`name`（APOS 2.0）、`contract_amount_untaxed`、`status`（`active` / `closing` / `closed`）、`redmine_project_id`、`target_close_date`。

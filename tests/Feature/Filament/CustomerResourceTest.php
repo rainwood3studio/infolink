@@ -1,6 +1,7 @@
 <?php
 
 use App\Enums\CustomerStatus;
+use App\Enums\MaintenanceCycle;
 use App\Enums\ProjectStatus;
 use App\Filament\Resources\Customers\Pages\CreateCustomer;
 use App\Filament\Resources\Customers\Pages\EditCustomer;
@@ -29,6 +30,36 @@ it('creates a customer', function () {
     expect(Customer::sole())
         ->short_name->toBe('墊腳石')
         ->redmine_project_ids->toBe([12, 34]);
+});
+
+it('saves the bank aliases and the maintenance contract', function () {
+    Livewire::test(CreateCustomer::class)
+        ->fillForm([
+            'name' => '我識出版社有限公司',
+            'short_name' => '我識',
+            'status' => CustomerStatus::Active,
+            'counterparties' => [' 我視整合傳播 '],
+            'maintenance_fee_untaxed' => 20_000,
+            'maintenance_cycle' => MaintenanceCycle::Monthly,
+            'maintenance_since' => '2026-01-01',
+        ])
+        ->call('create')
+        ->assertHasNoFormErrors();
+
+    $customer = Customer::sole();
+
+    expect($customer->counterparties)->toBe(['我視整合傳播'])
+        ->and($customer->bankAliases())->toBe(['我視整合傳播', '我識出版社有限公司', '我識'])
+        ->and($customer->hasMaintenanceContract())->toBeTrue()
+        ->and($customer->maintenance_cycle)->toBe(MaintenanceCycle::Monthly)
+        ->and($customer->maintenance_since->toDateString())->toBe('2026-01-01');
+});
+
+it('needs the fee, the cycle and the start date together for a maintenance contract', function () {
+    Livewire::test(CreateCustomer::class)
+        ->fillForm(['name' => '南陽實業', 'short_name' => '南陽', 'status' => CustomerStatus::Active, 'maintenance_fee_untaxed' => 40_000])
+        ->call('create')
+        ->assertHasFormErrors(['maintenance_cycle', 'maintenance_since']);
 });
 
 it('rejects a duplicate short name', function () {

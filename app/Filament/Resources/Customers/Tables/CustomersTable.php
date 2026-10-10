@@ -5,6 +5,7 @@ namespace App\Filament\Resources\Customers\Tables;
 use App\Enums\CustomerStatus;
 use App\Filament\Support\Money;
 use App\Filament\Support\SourceFields;
+use App\Models\Customer;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
@@ -30,6 +31,13 @@ class CustomersTable
                 TextColumn::make('status')
                     ->label('狀態')
                     ->badge()
+                    ->sortable(),
+                TextColumn::make('maintenance_fee_untaxed')
+                    ->label('維護合約')
+                    ->state(fn (Customer $record): ?string => $record->hasMaintenanceContract()
+                        ? $record->maintenance_cycle->getLabel().' '.Money::format($record->maintenance_fee_untaxed)
+                        : null)
+                    ->placeholder('—')
                     ->sortable(),
                 TextColumn::make('projects_count')
                     ->label('專案數')
