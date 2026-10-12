@@ -173,7 +173,7 @@ class DevActivityReport
                     'issues' => count(array_intersect(array_unique($row['issue_ids']), $existingIssues)),
                     'type_mix' => $this->typeMix($list),
                     'ai_assisted_ratio' => $count > 0 ? $list->where('is_ai_assisted', true)->count() / $count : null,
-                    'repos' => $list->countBy(fn (GithubCommit $commit): string => $commit->repo->name)->sortDesc()->take(3)->all(),
+                    'repos' => $list->countBy(fn (GithubCommit $commit): string => $commit->repo->name)->sortDesc()->all(),
                     'last_commit_at' => $list->max('authored_at'),
                     'redmine' => $row['redmine'] ?? null,
                 ];

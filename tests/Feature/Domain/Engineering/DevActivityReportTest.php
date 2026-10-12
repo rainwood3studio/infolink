@@ -80,6 +80,19 @@ it('groups identities into developers and leaves unmapped identities on their ow
         ]);
 });
 
+it('lists every repo a person touched, busiest first, not just the top three', function () {
+    foreach (['saber' => 4, 'zero-api' => 3, 'zero-web' => 2, 'tools' => 1, 'ocean' => 1] as $name => $commits) {
+        $repo = GithubRepo::factory()->create(['name' => $name, 'full_name' => "infolinktw/{$name}"]);
+        for ($index = 0; $index < $commits; $index++) {
+            devCommit($this->work, $repo, '2026-10-01 1'.$index.':00');
+        }
+    }
+
+    $person = $this->report->people($this->from, $this->to)->keyBy('key')["dev:{$this->yubin->id}"];
+
+    expect($person['repos'])->toBe(['saber' => 4, 'zero-api' => 3, 'zero-web' => 2, 'tools' => 1, 'ocean' => 1]);
+});
+
 it('counts commits per person per day for the heatmap', function () {
     devCommit($this->work, $this->repo, '2026-10-01 10:00');
     devCommit($this->home, $this->repo, '2026-10-01 23:30');

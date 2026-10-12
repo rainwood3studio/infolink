@@ -92,13 +92,15 @@
                         </div>
                     @endif
 
-                    <div class="da-muted" style="display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0.25rem 0.75rem; font-size: 0.75rem;">
+                    <div class="da-muted" style="display: flex; flex-direction: column; gap: 0.25rem; font-size: 0.75rem;">
                         <span style="font-variant-numeric: tabular-nums;" title="行數已排除 lock 檔與產生的檔案，僅供參考">
                             +{{ number_format($row['lines_added']) }} / −{{ number_format($row['lines_deleted']) }} 行
                         </span>
                         @if ($row['repos'] !== [])
-                            <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-                                {{ collect($row['repos'])->map(fn (int $count, string $repo): string => "{$repo} {$count}")->implode(' · ') }}
+                            <span style="display: flex; flex-wrap: wrap; gap: 0.125rem 0.5rem;" title="這段期間每個 repo 的 commit 數">
+                                @foreach ($row['repos'] as $repo => $count)
+                                    <span style="white-space: nowrap; font-variant-numeric: tabular-nums;">{{ $repo }} <span style="font-weight: 600;">{{ $count }}</span></span>
+                                @endforeach
                             </span>
                         @endif
                     </div>
