@@ -60,11 +60,16 @@ class ReceivableService
     }
 
     /**
-     * Record the invoice date. A receivable that is already received keeps its status.
+     * Record the invoice date and, when given, the 統一發票 number. A receivable that is already received keeps its
+     * status; an existing invoice number is kept when none is passed.
      */
-    public function markInvoiced(Receivable $receivable, CarbonInterface $invoicedOn): Receivable
+    public function markInvoiced(Receivable $receivable, CarbonInterface $invoicedOn, ?string $invoiceNumber = null): Receivable
     {
         $receivable->invoiced_on = $invoicedOn;
+
+        if (filled($invoiceNumber)) {
+            $receivable->invoice_number = trim($invoiceNumber);
+        }
 
         if ($receivable->status === ReceivableStatus::Planned) {
             $receivable->status = ReceivableStatus::Invoiced;

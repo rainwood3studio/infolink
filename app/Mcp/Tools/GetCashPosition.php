@@ -12,7 +12,7 @@ use Laravel\Mcp\Server\Attributes\Description;
 use Laravel\Mcp\Server\Attributes\Name;
 
 #[Name('get_cash_position')]
-#[Description('Current cash position: latest bank balance (NTD, integer), recurring monthly cost, runway in months, outstanding receivables (taxed; high/low confidence; overdue), the live month-end forecast to year end, and how it differs from the last saved forecast snapshot. Amounts are whole NTD.')]
+#[Description('Current cash position: latest bank balance (NTD, integer), recurring monthly cost, runway in months, outstanding receivables (taxed; high/low confidence; overdue), the live month-end forecast to year end (cost baseline + planned one-offs + recurring fixed expenses on their due dates — see `forecast.recurring_expenses`; expenses already inside the baseline are not deducted twice, `expense_calendar` lists them all), and how it differs from the last saved forecast snapshot. Amounts are whole NTD.')]
 class GetCashPosition extends ReadTool
 {
     public function handle(Request $request, FinancePosition $financePosition): Response
@@ -47,6 +47,8 @@ class GetCashPosition extends ReadTool
                 'min_balance' => $forecast->minBalance,
                 'min_balance_month' => $forecast->minBalanceMonth,
                 'rows' => array_map(fn (array $row): array => array_diff_key($row, ['items' => true]), $forecast->rows),
+                'planned_cash_flows' => $forecast->assumptions['planned_cash_flows'] ?? [],
+                'recurring_expenses' => $forecast->assumptions['recurring_expenses'] ?? [],
                 'method' => $forecast->assumptions['method'] ?? null,
             ],
             'previous_snapshot' => $previous === null ? null : [

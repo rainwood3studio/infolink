@@ -15,9 +15,10 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
- * An expected payment from a customer. Overdue is derived from `expected_on`, never stored.
+ * An expected payment from a customer. Overdue is derived from `expected_on`, never stored. `invoice_number` is the
+ * 統一發票 number once the invoice is issued; `invoiced_on` alone says when.
  */
-#[Fillable(['customer_id', 'project_id', 'item', 'amount_untaxed', 'tax_rate', 'expected_on', 'confidence', 'status', 'invoiced_on', 'received_on', 'is_recurring'])]
+#[Fillable(['customer_id', 'project_id', 'item', 'amount_untaxed', 'tax_rate', 'expected_on', 'confidence', 'status', 'invoiced_on', 'invoice_number', 'received_on', 'is_recurring'])]
 class Receivable extends Model
 {
     /** @use HasFactory<ReceivableFactory> */

@@ -31,4 +31,16 @@ class ReceivableFactory extends Factory
             'is_recurring' => false,
         ];
     }
+
+    /**
+     * Invoiced on the given day (default today) with a 統一發票 number.
+     */
+    public function invoiced(?string $invoicedOn = null, ?string $invoiceNumber = null): static
+    {
+        return $this->state([
+            'status' => ReceivableStatus::Invoiced,
+            'invoiced_on' => $invoicedOn ?? today(),
+            'invoice_number' => $invoiceNumber ?? strtoupper(fake()->lexify('??')).'-'.fake()->numerify('########'),
+        ]);
+    }
 }

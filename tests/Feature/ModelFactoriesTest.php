@@ -16,6 +16,7 @@ use App\Models\Insight;
 use App\Models\MetricValue;
 use App\Models\Project;
 use App\Models\Receivable;
+use App\Models\RecurringExpense;
 use App\Models\RedmineIssue;
 use App\Models\RedmineStatusChange;
 use App\Models\RedmineStatusSnapshot;
@@ -30,6 +31,7 @@ test('every factory persists a valid record', function (string $model) {
     Project::class,
     Receivable::class,
     CostBaseline::class,
+    RecurringExpense::class,
     CashForecast::class,
     ActionItem::class,
     Insight::class,

@@ -4,6 +4,7 @@ use App\Enums\Confidence;
 use App\Enums\ReceivableStatus;
 use App\Enums\Source;
 use App\Mcp\Servers\InfolinkServer;
+use App\Mcp\Tools\ListReceivables;
 use App\Mcp\Tools\RecordReceivablePayment;
 use App\Mcp\Tools\UpsertReceivable;
 use App\Models\BankAccount;
@@ -74,6 +75,20 @@ test('recurring receivables are one per month', function () {
 
     expect(Receivable::query()->count())->toBe(2)
         ->and(Receivable::query()->pluck('external_key')->all())->toEqualCanonicalizing(['我識||維運費|2026-10', '我識||維運費|2026-11']);
+});
+
+test('upsert_receivable records the invoice number and list_receivables returns it', function () {
+    InfolinkServer::actingAs(mcpUser(['write']))
+        ->tool(UpsertReceivable::class, ['customer' => '長照', 'item' => '期中款', 'amount_untaxed' => 450000, 'expected_on' => '2026-09-30', 'status' => 'invoiced', 'invoiced_on' => '2026-09-25', 'invoice_number' => 'AB-12345678'])
+        ->assertOk()
+        ->assertSee(['"status":"invoiced"', '"invoiced_on":"2026-09-25"', '"invoice_number":"AB-12345678"']);
+
+    expect(Receivable::query()->sole()->invoice_number)->toBe('AB-12345678');
+
+    InfolinkServer::actingAs(mcpUser(['read']))
+        ->tool(ListReceivables::class)
+        ->assertOk()
+        ->assertSee('"invoice_number":"AB-12345678"');
 });
 
 test('upsert_receivable lists customers when the customer is unknown', function () {

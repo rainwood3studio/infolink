@@ -38,6 +38,7 @@
             <div style="display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.25rem 0.75rem;">
                 <a href="{{ CustomerResource::getUrl('edit', ['record' => $row['id']]) }}" class="cc-link" style="font-size: 1rem; font-weight: 600;">{{ $row['short_name'] }}</a>
                 <span class="cc-muted" style="font-size: 0.8125rem;">{{ $row['name'] }}</span>
+                <a href="{{ CustomerResource::getUrl('view', ['record' => $row['id']]) }}" class="cc-link" style="font-size: 0.75rem; color: var(--cc-link);">總覽 →</a>
                 @if ($row['status'] !== 'active')
                     <x-filament::badge color="gray" class="cc-badge">{{ $row['status_label'] }}</x-filament::badge>
                 @endif

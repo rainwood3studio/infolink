@@ -15,6 +15,7 @@ use App\Models\Deal;
 use App\Models\PlannedCashFlow;
 use App\Models\Project;
 use App\Models\Receivable;
+use App\Models\RecurringExpense;
 use App\Models\RedmineIssue;
 use App\Models\RedmineStatusSnapshot;
 use Carbon\CarbonImmutable;
@@ -295,3 +296,28 @@ it('rejects a horizon or delay outside the supported range', function (int $mont
     'negative delay' => [12, -1],
     'delay over a year' => [12, 13],
 ])->throws(InvalidArgumentException::class);
+
+it('puts recurring fixed expenses in their own layer and deducts them from the confirmed balance', function () {
+    revenueOutlookScenario();
+    RecurringExpense::factory()->vat(50_000)->create(['starts_on' => '2026-01-01']);
+    RecurringExpense::factory()->inBaseline()->create(['name' => '勞健保', 'amount' => 15_000, 'due_day' => 31, 'starts_on' => '2026-01-01']);
+
+    $outlook = app(RevenueOutlook::class)->calculate();
+
+    expect(array_slice(revenueOutlookColumn($outlook, 'fixed_outflow'), 0, 5, true))->toBe([
+        '2026-09' => 0,
+        '2026-10' => 0,
+        '2026-11' => 50_000,
+        '2026-12' => 0,
+        '2027-01' => 50_000,
+    ])
+        ->and($outlook['months'][2])->toMatchArray([
+            'cost' => 200_000,
+            'planned_outflow' => 80_000,
+            'fixed_outflow' => 50_000,
+            'net_confirmed' => -230_000,
+            'balance_confirmed' => 1_520_000,
+        ])
+        ->and($outlook['months'][2]['items']['fixed'])->toBe([['label' => '營業稅（11-15）', 'amount' => -50_000]])
+        ->and(array_column($outlook['months'], 'balance_confirmed'))->toBe(array_column(app(CashForecaster::class)->calculate(until: '2027-08')->rows, 'balance'));
+});

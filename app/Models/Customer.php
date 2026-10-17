@@ -5,6 +5,8 @@ namespace App\Models;
 use App\Enums\CustomerStatus;
 use App\Enums\MaintenanceCycle;
 use App\Models\Concerns\HasSource;
+use Carbon\CarbonImmutable;
+use Carbon\CarbonInterface;
 use Database\Factories\CustomerFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -73,5 +75,27 @@ class Customer extends Model
     public function receivables(): HasMany
     {
         return $this->hasMany(Receivable::class);
+    }
+
+    /**
+     * @return HasMany<Deal, $this>
+     */
+    public function deals(): HasMany
+    {
+        return $this->hasMany(Deal::class);
+    }
+
+    /**
+     * Signed days from `$today` to `maintenance_until` (negative = already ended); null without a contract or an end date.
+     */
+    public function maintenanceDaysLeft(?CarbonInterface $today = null): ?int
+    {
+        if (! $this->hasMaintenanceContract() || $this->maintenance_until === null) {
+            return null;
+        }
+
+        $today = CarbonImmutable::instance($today ?? today())->startOfDay();
+
+        return (int) $today->diffInDays(CarbonImmutable::instance($this->maintenance_until)->startOfDay(), false);
     }
 }

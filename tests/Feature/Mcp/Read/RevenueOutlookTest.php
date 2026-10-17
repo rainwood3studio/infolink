@@ -57,9 +57,9 @@ test('revenue_outlook returns the summary, the month layers as columns and rows,
             '"zero_month_confirmed":{"month":"2027-08","extrapolated":false,"months_of_runway_after_horizon":null}',
             '"pipeline_weighted_total":0,"open_deals":1,"counted_deals":0',
             '"recurring_last_month":"2026-12","recurring_assumed_from":"2027-01","low_confidence_taxed":400000',
-            '"columns":["month","receivables","recurring","recurring_assumed","low_confidence","planned_inflow","cost","planned_outflow","pipeline_weighted","net_confirmed","net_base","balance_confirmed","balance_base","balance_with_pipeline"]',
-            '["2026-11",0,100000,0,0,0,200000,80000,0,-180000,-180000,1570000,1570000,1570000]',
-            '["2027-01",0,0,100000,0,0,200000,0,0,-200000,-100000,1270000,1370000,1370000]',
+            '"columns":["month","receivables","recurring","recurring_assumed","low_confidence","planned_inflow","cost","planned_outflow","fixed_outflow","pipeline_weighted","net_confirmed","net_base","balance_confirmed","balance_base","balance_with_pipeline"]',
+            '["2026-11",0,100000,0,0,0,200000,80000,0,0,-180000,-180000,1570000,1570000,1570000]',
+            '["2027-01",0,0,100000,0,0,200000,0,0,0,-200000,-100000,1270000,1370000,1370000]',
             '"title":"官網改版"',
             '"missing":["金額","預計成交日","下一步日期"],"counted":false,"not_counted_reason":"missing_fields"',
             '"closing_receivables":[]',
@@ -75,8 +75,8 @@ test('revenue_outlook delays the project receivables and counts low-confidence o
         ->assertOk()
         ->assertSee([
             '"options":{"months":12,"delay_months":2,"include_low_confidence":true}',
-            '["2026-10",0,100000,0,0,0,200000,0,0,-100000,-100000,850000,850000,850000]',
-            '["2026-12",600000,100000,0,400000,0,200000,0,0,500000,900000,1470000,1870000,1870000]',
+            '["2026-10",0,100000,0,0,0,200000,0,0,0,-100000,-100000,850000,850000,850000]',
+            '["2026-12",600000,100000,0,400000,0,200000,0,0,0,500000,900000,1470000,1870000,1870000]',
             '"peak":{"month":"2026-12","balance":1870000}',
         ]);
 });

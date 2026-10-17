@@ -10,6 +10,7 @@
     $hasAssumed = array_sum(array_column($months, 'recurring_assumed')) > 0;
     $hasPlannedInflow = array_sum(array_column($months, 'planned_inflow')) > 0;
     $hasPlannedOutflow = array_sum(array_column($months, 'planned_outflow')) > 0;
+    $hasFixedOutflow = array_sum(array_column($months, 'fixed_outflow')) > 0;
     $monthIndex = array_flip(array_column($months, 'month'));
     $assumedIndex = $monthIndex[$outlook['assumptions']['recurring_assumed_from']] ?? null;
 
@@ -33,10 +34,11 @@
     $outLayers = array_values(array_filter([
         ['key' => 'cost', 'label' => '月成本', 'fill' => 'var(--ro-cost)'],
         $hasPlannedOutflow ? ['key' => 'planned_outflow', 'label' => '已排定支出', 'fill' => 'var(--ro-planned)'] : null,
+        $hasFixedOutflow ? ['key' => 'fixed_outflow', 'label' => '固定支出', 'fill' => 'var(--ro-fixed)'] : null,
     ]));
 
     $inMax = max(array_map(fn (array $month): int => array_sum(array_map(fn (array $layer): int => $month[$layer['key']], $inLayers)), $months));
-    $outMax = max(array_map(fn (array $month): int => $month['cost'] + $month['planned_outflow'], $months));
+    $outMax = max(array_map(fn (array $month): int => $month['cost'] + $month['planned_outflow'] + $month['fixed_outflow'], $months));
     $flowStep = RevenueOutlook::niceStep($inMax + $outMax, 6);
     $flowHi = max(1, ceil($inMax / $flowStep)) * $flowStep;
     $flowLo = -ceil($outMax / $flowStep) * $flowStep;
@@ -100,6 +102,7 @@
         $add('加權業務機會', $month['pipeline_weighted'], $month['items']['pipeline'], '（未稅，不算進月淨額）');
         $lines[] = '月成本 '.RevenueOutlook::money(-$month['cost']);
         $add('已排定支出', -$month['planned_outflow'], array_filter($month['items']['planned'], fn (array $item): bool => $item['amount'] < 0));
+        $add('固定支出', -$month['fixed_outflow'], $month['items']['fixed']);
         $lines[] = '月淨額 '.RevenueOutlook::money($month['net_base'], signed: true);
 
         return implode("\n", $lines);

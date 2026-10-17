@@ -7,6 +7,8 @@ use App\Domain\Alerts\Rules\CashLowRule;
 use App\Domain\Alerts\Rules\ClosingRiskRule;
 use App\Domain\Alerts\Rules\DealStaleRule;
 use App\Domain\Alerts\Rules\DeliveryBacklogGrowingRule;
+use App\Domain\Alerts\Rules\ExpenseDueRule;
+use App\Domain\Alerts\Rules\MaintenanceRenewalRule;
 use App\Domain\Alerts\Rules\MetricThresholdRule;
 use App\Domain\Alerts\Rules\ReceivableDueRule;
 use App\Domain\Alerts\Rules\ReceivableOverdueRule;
@@ -51,9 +53,11 @@ class RuleEvaluator
         ReceivableDueRule::class,
         ReceivableOverdueRule::class,
         VatReserveRule::class,
+        ExpenseDueRule::class,
         DeliveryBacklogGrowingRule::class,
         ClosingRiskRule::class,
         DealStaleRule::class,
+        MaintenanceRenewalRule::class,
         SyncFailedRule::class,
         BriefMissingRule::class,
         ServerDiskRule::class,

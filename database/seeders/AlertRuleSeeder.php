@@ -7,6 +7,8 @@ use App\Domain\Alerts\Rules\CashLowRule;
 use App\Domain\Alerts\Rules\ClosingRiskRule;
 use App\Domain\Alerts\Rules\DealStaleRule;
 use App\Domain\Alerts\Rules\DeliveryBacklogGrowingRule;
+use App\Domain\Alerts\Rules\ExpenseDueRule;
+use App\Domain\Alerts\Rules\MaintenanceRenewalRule;
 use App\Domain\Alerts\Rules\ReceivableDueRule;
 use App\Domain\Alerts\Rules\ReceivableOverdueRule;
 use App\Domain\Alerts\Rules\ServerDiskRule;
@@ -115,6 +117,17 @@ class AlertRuleSeeder extends Seeder
                 'params' => ['window_days' => 14],
             ],
             [
+                'key' => 'expense-due',
+                'name' => '固定支出即將到期',
+                'description' => '固定支出（營業稅、勞健保、營所稅、獎金、租金…）的某次到期日在 window_days 天內。已包含在月成本基準裡的只在金額 ≥ min_amount 時提醒；內文附付完後的現金餘額。每次到期一則，到期日過後由規則自動解除。',
+                'query_class' => ExpenseDueRule::class,
+                'severity' => InsightSeverity::Info,
+                'category' => Category::Finance,
+                'title_template' => '{name} {amount} 萬將於 {date} 到期（{days} 天後）',
+                'fingerprint_template' => 'expense-due:{id}:{due_on}',
+                'params' => ['window_days' => 7, 'min_amount' => 50_000],
+            ],
+            [
                 'key' => 'delivery-backlog-growing',
                 'name' => 'backlog 成長',
                 'description' => '`delivery.net_flow`（每週新增 − 結案）連續 weeks 個已結束的週 > 門檻。',
@@ -186,6 +199,18 @@ class AlertRuleSeeder extends Seeder
                 'category' => Category::Sales,
                 'title_template' => '{label}{reason}',
                 'fingerprint_template' => 'deal-stale:{id}',
+            ],
+            [
+                'key' => 'maintenance-renewal',
+                'name' => '維護合約到期',
+                'description' => '有維護合約（維護費、週期、起算日都填了）且填了到期日的客戶，到期日在門檻天數內或已過期；每個客戶一則 maintenance-renewal:<簡稱>。把到期日往後延（續約）或清掉維護合約欄位後自動解除。',
+                'query_class' => MaintenanceRenewalRule::class,
+                'operator' => '<=',
+                'threshold' => 45,
+                'severity' => InsightSeverity::Warning,
+                'category' => Category::Sales,
+                'title_template' => '{customer} 維護合約{days_text}（{until}，{cycle} NT${fee}）',
+                'fingerprint_template' => 'maintenance-renewal:{customer}',
             ],
             [
                 'key' => 'sync-failed',

@@ -70,6 +70,11 @@ class ReceivablesTable
                     ->date()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
+                TextColumn::make('invoice_number')
+                    ->label('發票號碼')
+                    ->searchable()
+                    ->placeholder('—')
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('received_on')
                     ->label('收款日')
                     ->date()

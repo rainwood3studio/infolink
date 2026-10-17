@@ -72,10 +72,20 @@
 | 停滯惡化 | `delivery.stalled_90d` 週增 > 10 | warning | `delivery-stalled:<project>` |
 | 結案專案風險 | closing 專案距目標日 < 30 天且未結議題 > 10 | critical | `closing-risk:<project>` |
 | 業務斷層 | `sales.deals_no_next_action` > 0 持續 7 天 | info | `deal-stale:<id>` |
+| 維護合約到期 | 有維護合約且填了到期日的客戶，到期日在 45 天內（`threshold`）或已過期；續約後把起訖日往後延即自動解除 | warning | `maintenance-renewal:<客戶簡稱>` |
 | 資料過期 | 任一同步連續 24 小時失敗 | warning | `sync-failed:<job>` |
 | 每日簡報未產生 | 工作日 10:00 仍無當日 `daily_brief` | warning | `brief-missing:<date>` |
+| 固定支出即將到期 | `recurring_expenses` 的某次到期日在 7 天內（`window_days`）；已含月成本的只在金額 ≥ 50,000（`min_amount`）時提醒。內文附付完後的餘額 | info | `expense-due:<id>:<due_on>` |
 
 規則只負責「超過門檻」這種能用一行條件判斷的事；「為什麼」「該怎麼辦」交給 Claude 在簡報裡補上。
+
+### 客戶總覽（/admin/customers/{id}）
+
+客戶列表點一列（或「總覽」）進到該客戶的一頁：12 個月入帳／未收應收／逾期／維護合約四張數字卡、要處理的事（合約金額未填、維護合約 N 天後到期或已到期、逾期應收、入帳對不到戶名）、維護合約、專案（含合約金額與應收 roll-up）、未收應收、近 12 個月入帳長條圖、經常性應收、業務機會、Redmine 未結。資料來自 `App\Domain\Sales\CustomerOverview`（入帳用和「客戶收款」同一套戶名比對規則），MCP 工具 `customer_overview` 回同一份 JSON。列表另有可切換的「維護到期」欄，45 天內或已過期標紅。
+
+### 請款進度（/admin/billing）
+
+每個專案一條堆疊進度條：合約金額（未稅）拆成已收、已開票未收、已排未開票，剩下是尚未排入應收的部分（負的＝應收超過合約，標紅）。只算非經常性、未取消的應收。「逾期」＝預計收款日已過仍未收；「到期未開票」＝7 天內要收但沒有 `invoiced_on` 的 planned 應收。每筆應收可以直接「標記已開票」（填開票日與發票號碼）或「標記已收」。下方「待沖銷入帳」列出銀行明細裡類別為收入、6 個月內、還沒對到應收的入帳：依戶名找客戶（和「客戶收款」同一套 `CounterpartyMatcher` 規則），再在該客戶的未收應收裡比金額——含稅相符、未稅相符、2–3 筆合計相符、差 1% 或 100 元以內；前三種且預計收款日在入帳日 60 天內的給「沖銷」一鍵按鈕（收款日＝入帳日；差太遠多半是另一期的款，只列出不預選），否則「選擇應收」自己挑。最後「經常性收費」逐期列出每個維護合約客戶前兩期、本期、後兩期有沒有應收列、開票了沒、收到沒。資料來自 `App\Domain\Finance\BillingProgress` 與 `DepositMatcher`，MCP 工具 `billing_progress` 回同一份 JSON（含 `unsettled_deposits`），Claude 用 `record_receivable_payment` 帶 `transaction_id` 沖銷。銀行交易列表的收入入帳也有「沖銷應收」列操作，預選比對建議。
 
 ## Filament 後台
 
@@ -86,12 +96,15 @@
 📌 今天要處理          ← insights + action items 合併的工作清單
 💰 財務
    ├─ 現金與推估       ← 自訂 Page：餘額趨勢、推估圖、推估版本比較
+   ├─ 請款進度         ← 自訂 Page（/admin/billing）：每個專案從合約到入帳的堆疊進度條、待沖銷入帳、經常性收費各期
+   ├─ 支出日曆         ← 自訂 Page：接下來 6 個月的固定支出與已排定支出，逐月列到期日
+   ├─ 固定支出         ← Resource（營業稅、勞健保、營所稅、獎金、租金…的週期與到期日）
    ├─ 應收帳款         ← Resource
    ├─ 銀行交易         ← Resource（含 CSV 匯入 Action）
    └─ 月成本基準       ← Resource
 🤝 業務
    ├─ 業務機會         ← Resource（表格＋看板）
-   └─ 客戶／專案       ← Resource
+   └─ 客戶／專案       ← Resource；每個客戶有「總覽」頁（/admin/customers/{id}）
 🛠 交付（Redmine）
    ├─ 交付總覽         ← 自訂 Page：存量趨勢、驗證中拆分、各專案排行
    ├─ 議題（鏡像）      ← 唯讀 Resource，連結回 Redmine
@@ -136,3 +149,7 @@
 - 「指標定義」頁可以對任一個非計算型指標**手動補值**（例如 SaaS 試用客戶數）。
 - 銀行交易支援上傳 CSV；PDF 明細請 Claude 解析後用 `import_bank_transactions` 匯入。
 - 所有手動輸入的資料 `source = manual`，在歷史紀錄中可以跟自動來源區分。
+
+### 固定支出日曆
+
+月成本基準把一個月的錢攤平成一個數字，看不出營業稅（雙月 15 日）、營所稅（5 月）、年終獎金這種一次要拿出一大筆的時點，所以「90 天內最低點」會太樂觀，到期前也沒人提醒。`recurring_expenses` 把這些支出連同週期與到期日記下來：推估在每個到期日扣掉金額（已包含在月成本裡的只顯示不重複扣），收入展望多一層「固定支出」，`支出日曆` 頁把接下來 6 個月的到期日逐月排開並在最上面寫「月成本基準 NT$X；接下來 90 天額外固定支出 NT$Y」，`expense_calendar` MCP 工具回傳同一份資料，`固定支出即將到期` 規則在到期前 7 天提醒並附上付完後的餘額。金額不預設：先由老闆新增營業稅、勞健保、營所稅。

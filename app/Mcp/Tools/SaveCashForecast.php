@@ -15,7 +15,7 @@ use Laravel\Mcp\Server\Attributes\Description;
 use Laravel\Mcp\Server\Attributes\Name;
 
 #[Name('save_cash_forecast')]
-#[Description('Calculate and save a month-end cash forecast snapshot with the app\'s method (high-confidence outstanding receivables at TAXED amounts + planned cash flows − monthly cost baseline). as_of defaults to the latest bank transaction date and opening_balance to the bank balance on that date. Idempotent on as_of + label: saving again replaces the snapshot Claude saved with the same as_of and label. Use a label (e.g. "長照延到11月") for what-if scenarios. Returns the monthly rows, min balance and year-end balance.')]
+#[Description('Calculate and save a month-end cash forecast snapshot with the app\'s method (high-confidence outstanding receivables at TAXED amounts + planned cash flows − monthly cost baseline − recurring fixed expenses on their due dates, except those already inside the baseline). as_of defaults to the latest bank transaction date and opening_balance to the bank balance on that date. Idempotent on as_of + label: saving again replaces the snapshot Claude saved with the same as_of and label. Use a label (e.g. "長照延到11月") for what-if scenarios. Returns the monthly rows, min balance and year-end balance.')]
 class SaveCashForecast extends WriteTool
 {
     public function handle(Request $request, CashForecaster $forecaster): Response

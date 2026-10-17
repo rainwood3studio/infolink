@@ -99,6 +99,32 @@ it('marks a receivable as invoiced through the finance service', function () {
         ->invoiced_on->toDateString()->toBe('2026-09-21');
 });
 
+it('records the invoice number when marking invoiced and shows it in the form and table', function () {
+    $receivable = Receivable::factory()->create(['status' => ReceivableStatus::Planned]);
+
+    Livewire::test(ListReceivables::class)
+        ->callAction(TestAction::make('markInvoiced')->table($receivable), data: ['invoiced_on' => '2026-09-21', 'invoice_number' => 'AB-12345678'])
+        ->assertHasNoFormErrors()
+        ->assertNotified('已標記開票');
+
+    expect($receivable->refresh())
+        ->status->toBe(ReceivableStatus::Invoiced)
+        ->invoice_number->toBe('AB-12345678');
+
+    Livewire::test(EditReceivable::class, ['record' => $receivable->getRouteKey()])
+        ->assertSchemaStateSet(['invoice_number' => 'AB-12345678'])
+        ->fillForm(['invoice_number' => 'AB-87654321'])
+        ->call('save')
+        ->assertHasNoFormErrors();
+
+    expect($receivable->refresh()->invoice_number)->toBe('AB-87654321');
+
+    Livewire::test(ListReceivables::class)
+        ->assertTableColumnExists('invoice_number')
+        ->searchTable('AB-8765')
+        ->assertCanSeeTableRecords([$receivable]);
+});
+
 it('hides the received action for settled receivables', function () {
     $receivable = Receivable::factory()->create(['status' => ReceivableStatus::Received]);
 

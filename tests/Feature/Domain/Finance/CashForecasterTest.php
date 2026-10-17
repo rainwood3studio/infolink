@@ -11,6 +11,7 @@ use App\Models\CashForecast;
 use App\Models\CostBaseline;
 use App\Models\PlannedCashFlow;
 use App\Models\Receivable;
+use App\Models\RecurringExpense;
 use Carbon\CarbonImmutable;
 
 beforeEach(function () {
@@ -108,4 +109,39 @@ it('persists a snapshot', function () {
         ->and($snapshot->fresh()->min_balance_month)->toBe('2026-12')
         ->and($snapshot->fresh()->rows)->toHaveCount(3)
         ->and($snapshot->fresh()->source)->toBe(Source::System);
+});
+
+describe('recurring expenses', function () {
+    it('deducts each occurrence due after as_of unless it is already in the baseline', function () {
+        $vat = RecurringExpense::factory()->vat(30_000)->create(['starts_on' => '2026-01-01']);
+        RecurringExpense::factory()->create(['name' => '租金', 'amount' => 20_000, 'due_day' => 25, 'starts_on' => '2026-01-01']);
+        RecurringExpense::factory()->inBaseline()->create(['name' => '勞健保', 'amount' => 15_000, 'due_day' => 31, 'starts_on' => '2026-01-01']);
+        RecurringExpense::factory()->create(['name' => '已停用', 'amount' => 99_999, 'due_day' => 1, 'starts_on' => '2026-01-01', 'is_active' => false]);
+        RecurringExpense::factory()->create(['name' => '已結束', 'amount' => 99_999, 'due_day' => 1, 'starts_on' => '2026-01-01', 'ends_on' => '2026-10-15']);
+        RecurringExpense::factory()->create(['name' => '當天到期', 'amount' => 99_999, 'due_day' => 20, 'starts_on' => '2026-01-01', 'ends_on' => '2026-10-31']);
+
+        $result = $this->forecaster->calculate($this->asOf, 500_000);
+
+        expect(collect($result->rows)->map(fn (array $row): array => [$row['month'], $row['outflow'], $row['balance']])->all())->toBe([
+            ['2026-10', 60_000, 492_500],
+            ['2026-11', 180_000, 522_500],
+            ['2026-12', 120_000, 417_500],
+        ])
+            ->and($result->minBalance)->toBe(417_500)
+            ->and(collect($result->rows[1]['items'])->firstWhere('label', '營業稅'))->toBe(['label' => '營業稅', 'amount' => -30_000])
+            ->and($result->assumptions['recurring_expenses'])->toBe([
+                ['id' => $vat->id + 1, 'name' => '租金', 'due_on' => '2026-10-25', 'amount' => 20_000, 'category' => 'other'],
+                ['id' => $vat->id, 'name' => '營業稅', 'due_on' => '2026-11-15', 'amount' => 30_000, 'category' => 'tax'],
+                ['id' => $vat->id + 1, 'name' => '租金', 'due_on' => '2026-11-25', 'amount' => 20_000, 'category' => 'other'],
+                ['id' => $vat->id + 1, 'name' => '租金', 'due_on' => '2026-12-25', 'amount' => 20_000, 'category' => 'other'],
+            ])
+            ->and($result->assumptions['method'])->toContain('recurring fixed expenses');
+    });
+
+    it('leaves the forecast unchanged when there are no recurring expenses', function () {
+        $result = $this->forecaster->calculate($this->asOf, 500_000);
+
+        expect($result->assumptions['recurring_expenses'])->toBe([])
+            ->and($result->yearEndBalance)->toBe(507_500);
+    });
 });

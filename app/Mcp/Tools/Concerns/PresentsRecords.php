@@ -82,6 +82,7 @@ trait PresentsRecords
             'confidence' => $receivable->confidence->value,
             'status' => $receivable->status->value,
             'invoiced_on' => static::date($receivable->invoiced_on),
+            'invoice_number' => $receivable->invoice_number,
             'received_on' => static::date($receivable->received_on),
             'is_recurring' => $receivable->is_recurring,
             'external_key' => $receivable->external_key,

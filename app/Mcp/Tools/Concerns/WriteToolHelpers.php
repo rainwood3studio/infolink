@@ -72,6 +72,7 @@ trait WriteToolHelpers
             'status' => $receivable->status?->value,
             'is_overdue' => $receivable->is_overdue,
             'invoiced_on' => $receivable->invoiced_on?->toDateString(),
+            'invoice_number' => $receivable->invoice_number,
             'received_on' => $receivable->received_on?->toDateString(),
             'is_recurring' => $receivable->is_recurring,
             'notes' => $receivable->notes,

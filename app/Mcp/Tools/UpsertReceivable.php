@@ -29,7 +29,7 @@ class UpsertReceivable extends WriteTool
     /**
      * Fields copied from the request onto the receivable when present.
      */
-    protected const array FIELDS = ['item', 'amount_untaxed', 'tax_rate', 'expected_on', 'confidence', 'status', 'invoiced_on', 'is_recurring', 'notes', 'vault_ref'];
+    protected const array FIELDS = ['item', 'amount_untaxed', 'tax_rate', 'expected_on', 'confidence', 'status', 'invoiced_on', 'invoice_number', 'is_recurring', 'notes', 'vault_ref'];
 
     public function handle(Request $request, ReceivableService $receivables): Response
     {
@@ -49,6 +49,7 @@ class UpsertReceivable extends WriteTool
             'confidence' => ['nullable', Rule::in(self::enumValues(Confidence::class))],
             'status' => ['nullable', Rule::in(self::enumValues(ReceivableStatus::class))],
             'invoiced_on' => ['nullable', 'date_format:Y-m-d'],
+            'invoice_number' => ['nullable', 'string', 'max:32'],
             'is_recurring' => ['nullable', 'boolean'],
             'notes' => ['nullable', 'string'],
             'vault_ref' => ['nullable', 'string', 'max:255'],
@@ -193,7 +194,8 @@ class UpsertReceivable extends WriteTool
             'expected_on' => $schema->string()->format('date')->description('Expected payment date YYYY-MM-DD. Required when creating.'),
             'confidence' => $schema->string()->enum(self::enumValues(Confidence::class))->description('low when amount or timing is uncertain (excluded from the forecast).'),
             'status' => $schema->string()->enum(self::enumValues(ReceivableStatus::class))->description('planned / invoiced / cancelled. Use record_receivable_payment to mark received.'),
-            'invoiced_on' => $schema->string()->format('date'),
+            'invoiced_on' => $schema->string()->format('date')->description('Date the invoice was issued; set status to invoiced as well.'),
+            'invoice_number' => $schema->string()->description('統一發票 number, e.g. AB-12345678. Only when the invoice was actually issued.'),
             'is_recurring' => $schema->boolean()->description('Monthly fixed fee (維運費); one receivable per month.'),
             'notes' => $schema->string()->description('Why / source of the numbers; required in spirit when confidence=low.'),
             'vault_ref' => $schema->string()->description('Vault note path, e.g. 03.Business/Finance/2026 下半年現金推估.md'),

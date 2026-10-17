@@ -39,7 +39,7 @@ class CashAndForecast extends Page implements HasTable
 
     protected static ?string $slug = 'cash';
 
-    protected ?string $subheading = '推估只計高確定性應收（含稅，依預計收款月；已逾期的算在本月）加上已排定的現金流，扣除月成本基準；本月只扣尚未支出的部分。';
+    protected ?string $subheading = '推估只計高確定性應收（含稅，依預計收款月；已逾期的算在本月）加上已排定的現金流，扣除月成本基準（本月只扣尚未支出的部分）；固定支出（營業稅、營所稅、獎金…）在各自的到期日另外扣，已包含在月成本裡的不重複扣。';
 
     /**
      * @return array<class-string>

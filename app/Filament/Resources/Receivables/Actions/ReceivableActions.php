@@ -8,6 +8,7 @@ use App\Models\Receivable;
 use Carbon\CarbonImmutable;
 use Filament\Actions\Action;
 use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\TextInput;
 use Filament\Support\Icons\Heroicon;
 
 /**
@@ -28,9 +29,13 @@ class ReceivableActions
                     ->label('開票日')
                     ->default(today())
                     ->required(),
+                TextInput::make('invoice_number')
+                    ->label('發票號碼')
+                    ->placeholder('AB-12345678')
+                    ->maxLength(32),
             ])
             ->action(function (Receivable $record, array $data, Action $action): void {
-                app(ReceivableService::class)->markInvoiced($record, CarbonImmutable::parse($data['invoiced_on']));
+                app(ReceivableService::class)->markInvoiced($record, CarbonImmutable::parse($data['invoiced_on']), $data['invoice_number'] ?? null);
 
                 $action->success();
             })

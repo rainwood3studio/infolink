@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\BankTransactions\Tables;
 
 use App\Enums\TransactionCategory;
+use App\Filament\Resources\BankTransactions\Actions\SettleDepositAction;
 use App\Filament\Support\Money;
 use App\Filament\Support\SourceFields;
 use Carbon\CarbonImmutable;
@@ -94,6 +95,7 @@ class BankTransactionsTable
                     ->label('一次性'),
             ])
             ->recordActions([
+                SettleDepositAction::make(),
                 EditAction::make(),
             ])
             ->toolbarActions([

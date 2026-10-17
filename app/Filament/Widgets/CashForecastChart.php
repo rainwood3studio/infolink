@@ -7,7 +7,8 @@ use Filament\Widgets\ChartWidget;
 
 /**
  * Month-end cash forecast to year end, starting from the latest bank balance. It stops at year end because recurring
- * income is only entered through December; beyond that the line would show costs without income.
+ * income is only entered through December; beyond that the line would show costs without income. Outflow is the cost
+ * baseline plus planned one-offs plus recurring fixed expenses on their due dates (see CashForecaster).
  */
 class CashForecastChart extends ChartWidget
 {

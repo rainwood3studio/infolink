@@ -6,6 +6,7 @@
     $hasLow = $outlook['assumptions']['low_confidence_taxed'] > 0;
     $hasPipeline = $outlook['summary']['pipeline_weighted_total'] > 0;
     $hasPlanned = array_sum(array_column($months, 'planned_inflow')) + array_sum(array_column($months, 'planned_outflow')) > 0;
+    $hasFixed = array_sum(array_column($months, 'fixed_outflow')) > 0;
     $assumedFrom = $outlook['assumptions']['recurring_assumed_from'];
 
     $number = fn (int $amount): string => ($amount < 0 ? '−' : '').number_format(abs($amount));
@@ -34,6 +35,9 @@
                     <th scope="col">月成本</th>
                     @if ($hasPlanned)
                         <th scope="col">已排定收支</th>
+                    @endif
+                    @if ($hasFixed)
+                        <th scope="col">固定支出</th>
                     @endif
                     <th scope="col">月淨額</th>
                     <th scope="col">月底餘額（基準）</th>
@@ -64,6 +68,9 @@
                         @if ($hasPlanned)
                             <td @class(['ro-zero-cell' => $planned === 0]) title="{{ $itemsTitle($month['items']['planned']) }}">{{ $cell($planned) }}</td>
                         @endif
+                        @if ($hasFixed)
+                            <td @class(['ro-zero-cell' => $month['fixed_outflow'] === 0]) title="{{ $itemsTitle($month['items']['fixed']) }}">{{ $cell(-$month['fixed_outflow']) }}</td>
+                        @endif
                         <td @class(['ro-danger' => $month['net_base'] < 0]) style="font-weight: 600;">{{ $month['net_base'] > 0 ? '+' : '' }}{{ $number($month['net_base']) }}</td>
                         <td @class(['ro-danger' => $month['balance_base'] < 0]) style="font-weight: 600;">{{ $number($month['balance_base']) }}</td>
                         <td @class(['ro-danger' => $month['balance_confirmed'] < 0])>{{ $number($month['balance_confirmed']) }}</td>
@@ -79,6 +86,9 @@
 
     <div class="ro-muted" style="display: flex; flex-direction: column; gap: 0.125rem; margin-top: 0.75rem; font-size: 0.75rem;">
         <span>第一個月的月成本只扣還沒支出的部分；已逾期的應收算在第一個月。滑到金額上可以看是哪幾筆。</span>
+        @if ($hasFixed)
+            <span>固定支出是月成本基準之外、在到期月另外扣的款項（營業稅、營所稅、獎金…）；已包含在月成本裡的不會再列在這裡。</span>
+        @endif
         @if ($hasPipeline)
             <span>加權業務機會＝金額 × 成交機率，未稅，而且成交不等於入帳，所以不算進月淨額，只另外列一條「含業務機會」的餘額。</span>
         @endif

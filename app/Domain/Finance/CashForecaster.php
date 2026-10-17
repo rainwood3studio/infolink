@@ -10,6 +10,7 @@ use App\Models\CashForecast;
 use App\Models\CostBaseline;
 use App\Models\PlannedCashFlow;
 use App\Models\Receivable;
+use App\Models\RecurringExpense;
 use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Collection;
@@ -28,6 +29,9 @@ use InvalidArgumentException;
  *   one-off lines and reimbursements.
  * - Planned cash flows (VAT top-ups, bonuses, …) with flow_on after as_of are added in their month
  *   (negative = outflow, positive = inflow).
+ * - Recurring fixed expenses (營業稅 every other month, 營所稅 in May, bonuses, …; see {@see RecurringExpense}) are
+ *   deducted at every occurrence after as_of, unless `in_baseline` says the amount is already part of the cost
+ *   baseline — then it is only shown on the 支出日曆, never deducted twice.
  * - min_balance is taken over month-end rows only; the opening balance is not a candidate.
  */
 class CashForecaster
@@ -56,13 +60,14 @@ class CashForecaster
         $months = $this->months($asOf, $until);
         $rows = array_fill_keys($months, ['inflow' => 0, 'outflow' => 0, 'items' => []]);
         $assumptions = [
-            'method' => 'high-confidence outstanding receivables (taxed, by expected_on month; overdue in as_of month) + planned cash flows after as_of − cost baseline (as_of month: unpaid remainder only)',
+            'method' => 'high-confidence outstanding receivables (taxed, by expected_on month; overdue in as_of month) + planned cash flows after as_of − cost baseline (as_of month: unpaid remainder only) − recurring fixed expenses due after as_of that are not already in the baseline',
             'opening_balance_source' => $openingBalanceSource,
         ];
 
         $assumptions['receivables'] = $this->addReceivables($rows, $asOf, $until);
         $assumptions['excluded_low_confidence'] = $this->lowConfidenceSummary($until);
         $assumptions['planned_cash_flows'] = $this->addPlannedCashFlows($rows, $asOf, $until);
+        $assumptions['recurring_expenses'] = $this->addRecurringExpenses($rows, $asOf, $until);
         [$assumptions['cost_baselines'], $assumptions['as_of_month_cost']] = $this->addCosts($rows, $asOf);
 
         return $this->buildResult($asOf, $openingBalance, $rows, $assumptions);
@@ -210,6 +215,46 @@ class CashForecaster
                 'description' => $flow->description,
             ];
         }
+
+        return $used;
+    }
+
+    /**
+     * Every occurrence of an active recurring expense with as_of < due_on ≤ until. Only those NOT already inside the
+     * cost baseline are deducted; the rest would be counted twice (the baseline already carries them every month).
+     *
+     * @param  array<string, array{inflow:int, outflow:int, items:list<array{label:string, amount:int}>}>  $rows
+     * @return list<array{id:int, name:string, due_on:string, amount:int, category:string}>
+     */
+    protected function addRecurringExpenses(array &$rows, CarbonImmutable $asOf, CarbonImmutable $until): array
+    {
+        $used = [];
+
+        $expenses = RecurringExpense::query()
+            ->active()
+            ->where('in_baseline', false)
+            ->whereDate('starts_on', '<=', $until)
+            ->where(fn ($query) => $query->whereNull('ends_on')->orWhereDate('ends_on', '>', $asOf))
+            ->orderBy('id')
+            ->get();
+
+        foreach ($expenses as $expense) {
+            foreach ($expense->occurrencesBetween($asOf->addDay(), $until) as $occurrence) {
+                $month = $occurrence['due_on']->format('Y-m');
+
+                $rows[$month]['outflow'] += $occurrence['amount'];
+                $rows[$month]['items'][] = ['label' => $expense->name, 'amount' => -$occurrence['amount']];
+                $used[] = [
+                    'id' => $expense->id,
+                    'name' => $expense->name,
+                    'due_on' => $occurrence['due_on']->toDateString(),
+                    'amount' => $occurrence['amount'],
+                    'category' => $expense->category->value,
+                ];
+            }
+        }
+
+        usort($used, fn (array $a, array $b): int => [$a['due_on'], $a['id']] <=> [$b['due_on'], $b['id']]);
 
         return $used;
     }

@@ -18,9 +18,9 @@ The 12-month revenue outlook (the 收入展望 page): month by month what comes 
   - `recurring`: the recurring fee rows that are actually booked (one receivable per month), tax included. Never delayed.
   - `recurring_assumed`: an EXTRAPOLATION, not a booking. Recurring rows are only entered some months ahead, so every month after `assumptions.recurring_last_month` repeats that month's total — i.e. it assumes the maintenance contracts are renewed at the same fee. Always say so when quoting anything that depends on it.
   - `low_confidence`: low-confidence outstanding receivables, tax included. Always listed; counted in the base figures only with `include_low_confidence`.
-  - `planned_inflow` / `planned_outflow`: planned cash flows (VAT, bonuses, …). `cost`: the monthly cost baseline (as_of month: only the part not yet paid, see `assumptions.as_of_month_cost`).
+  - `planned_inflow` / `planned_outflow`: planned one-off cash flows. `fixed_outflow`: recurring fixed expenses (營業稅 by the 15th of odd months, 營所稅 in May, bonuses, …) falling due in the month and NOT already inside the cost baseline (see `expense_calendar`). `cost`: the monthly cost baseline (as_of month: only the part not yet paid, see `assumptions.as_of_month_cost`).
   - `pipeline_weighted`: open deals with both an amount and an expected close date inside the 12 months — amount × probability in the close month, plus recurring_monthly × probability in every later month. UNTAXED and weighted, and a deal closing is not cash arriving, so it is kept out of `net_base` and only feeds `balance_with_pipeline`.
-  - `net_confirmed` = receivables + recurring + planned_inflow − cost − planned_outflow; `net_base` = net_confirmed + recurring_assumed (+ low_confidence when included).
+  - `net_confirmed` = receivables + recurring + planned_inflow − cost − planned_outflow − fixed_outflow; `net_base` = net_confirmed + recurring_assumed (+ low_confidence when included).
   - Month-end balances: `balance_confirmed` (booked rows only; equals the cash forecast when `delay_months` is 0), `balance_base` (the headline scenario), `balance_with_pipeline` (base + cumulative pipeline).
 - `summary`: `monthly_cost`, `recurring_monthly` (the run-rate used for the extrapolation), `monthly_gap` = monthly_cost − recurring_monthly (positive = burning that much every month once the project money is in), `annual_gap` = monthly_gap × 12 (new business needed per year to break even), `peak` (highest month-end base balance), `first_declining_month` (from this month on the base net is negative in every month to the end; null if not), `zero_month` (first month-end with base balance < 0; `extrapolated` = not reached inside the 12 months, continued in a straight line at monthly_gap for `months_of_runway_after_horizon` months — an estimate; null = not burning), `zero_month_confirmed` (the same without the renewal assumption), `pipeline_weighted_total`, `open_deals`, `counted_deals`.
 - `deals`: every open deal with `missing` (any of 金額, 預計成交日, 下一步日期) and `counted`. A deal is NOT counted when it lacks an amount or an expected close date (`not_counted_reason` = missing_fields), when its close month is already past (close_date_passed) or after the 12 months (beyond_horizon). Name the uncounted deals and what they lack: the pipeline understates until they are filled in.
@@ -30,7 +30,7 @@ TEXT)]
 class RevenueOutlookSummary extends ReadTool
 {
     public const array MONTH_COLUMNS = [
-        'month', 'receivables', 'recurring', 'recurring_assumed', 'low_confidence', 'planned_inflow', 'cost', 'planned_outflow',
+        'month', 'receivables', 'recurring', 'recurring_assumed', 'low_confidence', 'planned_inflow', 'cost', 'planned_outflow', 'fixed_outflow',
         'pipeline_weighted', 'net_confirmed', 'net_base', 'balance_confirmed', 'balance_base', 'balance_with_pipeline',
     ];
 

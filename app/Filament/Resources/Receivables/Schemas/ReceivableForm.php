@@ -91,6 +91,10 @@ class ReceivableForm
                             ->required(),
                         DatePicker::make('invoiced_on')
                             ->label('開票日'),
+                        TextInput::make('invoice_number')
+                            ->label('發票號碼')
+                            ->placeholder('AB-12345678')
+                            ->maxLength(32),
                         DatePicker::make('received_on')
                             ->label('收款日'),
                     ])

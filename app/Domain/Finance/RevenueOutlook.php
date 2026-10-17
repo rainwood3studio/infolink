@@ -26,8 +26,9 @@ use InvalidArgumentException;
  *   i.e. the maintenance contracts are assumed to be renewed at the same fee.
  * - `low_confidence`: low-confidence outstanding receivables, tax included; listed always, counted in the base
  *   balance only when asked for. Not delayed.
- * - `planned_inflow` / `planned_outflow`: planned cash flows (VAT, bonuses, …). `cost`: the cost baseline (as_of
- *   month: only the part not yet paid).
+ * - `planned_inflow` / `planned_outflow`: planned cash flows (VAT, bonuses, …). `fixed_outflow`: recurring fixed
+ *   expenses (營業稅, 營所稅, bonuses, …) falling due in the month that are not already inside the cost baseline.
+ *   `cost`: the cost baseline (as_of month: only the part not yet paid).
  * - `pipeline_weighted`: open deals that have an amount and an expected close date inside the horizon:
  *   amount × probability in the close month plus recurring_monthly × probability in every later month. UNTAXED and
  *   not cash timing — a deal closing is not money arriving — so it only feeds `balance_with_pipeline`.
@@ -107,6 +108,7 @@ class RevenueOutlook
      *         planned_inflow: int,
      *         cost: int,
      *         planned_outflow: int,
+     *         fixed_outflow: int,
      *         pipeline_weighted: int,
      *         net_confirmed: int,
      *         net_base: int,
@@ -118,6 +120,7 @@ class RevenueOutlook
      *             recurring: list<array{label: string, amount: int}>,
      *             low_confidence: list<array{label: string, amount: int}>,
      *             planned: list<array{label: string, amount: int}>,
+     *             fixed: list<array{label: string, amount: int}>,
      *             pipeline: list<array{label: string, amount: int}>,
      *         },
      *     }>,
@@ -192,13 +195,15 @@ class RevenueOutlook
                 'planned_inflow' => 0,
                 'cost' => $row['outflow'],
                 'planned_outflow' => 0,
+                'fixed_outflow' => 0,
                 'pipeline_weighted' => 0,
-                'items' => ['receivables' => [], 'recurring' => [], 'low_confidence' => [], 'planned' => [], 'pipeline' => []],
+                'items' => ['receivables' => [], 'recurring' => [], 'low_confidence' => [], 'planned' => [], 'fixed' => [], 'pipeline' => []],
             ];
         }
 
         $delayedBeyondHorizon = $this->addConfirmedReceivables($rows, $forecast->assumptions['receivables'], $delayMonths);
         $this->addPlannedCashFlows($rows, $forecast->assumptions['planned_cash_flows']);
+        $this->addRecurringExpenses($rows, $forecast->assumptions['recurring_expenses']);
         $lowConfidenceTaxed = $this->addLowConfidence($rows, $asOfMonth, $until);
         $recurring = $this->addAssumedRecurring($rows, $asOfMonth);
         $deals = $this->addPipeline($rows, $asOfMonth);
@@ -305,6 +310,23 @@ class RevenueOutlook
             }
 
             $rows[$month]['items']['planned'][] = ['label' => $flow['description'], 'amount' => $flow['amount']];
+        }
+    }
+
+    /**
+     * Move the recurring fixed expenses the forecaster deducted out of its outflow into their own layer.
+     *
+     * @param  array<string, array<string, mixed>>  $rows
+     * @param  list<array{id: int, name: string, due_on: string, amount: int, category: string}>  $expenses
+     */
+    protected function addRecurringExpenses(array &$rows, array $expenses): void
+    {
+        foreach ($expenses as $expense) {
+            $month = substr($expense['due_on'], 0, 7);
+
+            $rows[$month]['fixed_outflow'] += $expense['amount'];
+            $rows[$month]['cost'] -= $expense['amount'];
+            $rows[$month]['items']['fixed'][] = ['label' => $expense['name'].'（'.substr($expense['due_on'], 5).'）', 'amount' => -$expense['amount']];
         }
     }
 
@@ -476,7 +498,7 @@ class RevenueOutlook
         $result = [];
 
         foreach ($rows as $row) {
-            $netConfirmed = $row['receivables'] + $row['recurring'] + $row['planned_inflow'] - $row['cost'] - $row['planned_outflow'];
+            $netConfirmed = $row['receivables'] + $row['recurring'] + $row['planned_inflow'] - $row['cost'] - $row['planned_outflow'] - $row['fixed_outflow'];
             $netBase = $netConfirmed + $row['recurring_assumed'] + ($includeLowConfidence ? $row['low_confidence'] : 0);
 
             $confirmed += $netConfirmed;

@@ -33,7 +33,7 @@ class CurrentForecastChart extends ChartWidget
 
     public function getDescription(): string
     {
-        return '綠：高確定性應收（含稅）與已排定的現金流入；紅：月成本基準與已排定支出；線：月底餘額。';
+        return '綠：高確定性應收（含稅）與已排定的現金流入；紅：月成本基準、已排定支出與到期的固定支出（已含在月成本裡的不重複扣）；線：月底餘額。';
     }
 
     /**

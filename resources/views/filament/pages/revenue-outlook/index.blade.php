@@ -2,12 +2,12 @@
     <style>
         .ro-root {
             --ro-receivables: #2a78d6; --ro-recurring: #1baf7a; --ro-low: #eda100; --ro-pipeline: #4a3aa7;
-            --ro-cost: color-mix(in oklab, var(--gray-500) 40%, transparent); --ro-planned: color-mix(in oklab, var(--gray-500) 85%, transparent);
+            --ro-cost: color-mix(in oklab, var(--gray-500) 40%, transparent); --ro-planned: color-mix(in oklab, var(--gray-500) 85%, transparent); --ro-fixed: #c2410c;
             --ro-surface: #fff; --ro-danger: var(--danger-600); --ro-warn: var(--warning-600); --ro-link: var(--primary-600);
             --ro-rule: color-mix(in oklab, var(--gray-500) 18%, transparent); --ro-zero: color-mix(in oklab, var(--gray-500) 85%, transparent);
         }
         .dark .ro-root {
-            --ro-receivables: #3987e5; --ro-recurring: #199e70; --ro-low: #c98500; --ro-pipeline: #9085e9;
+            --ro-receivables: #3987e5; --ro-recurring: #199e70; --ro-low: #c98500; --ro-pipeline: #9085e9; --ro-fixed: #ea7a3a;
             --ro-surface: var(--gray-900); --ro-danger: var(--danger-400); --ro-warn: var(--warning-400); --ro-link: var(--primary-400);
         }
         .ro-root[data-loading] { opacity: 0.5; transition: opacity 150ms; }

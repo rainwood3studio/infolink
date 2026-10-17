@@ -17,9 +17,9 @@ use Illuminate\Support\Collection;
  *
  * Definitions:
  * - A deposit is a bank line of category `revenue` with `deposit > 0`, tax-inclusive as received. It belongs to the
- *   customer of its linked receivable; without one, to the customer whose bank alias ({@see Customer::bankAliases()})
- *   matches the counterparty — exactly, or one being a prefix of the other (「我識出版社」 vs 「我識出版社有限公司」),
- *   the longest alias winning. Deposits nobody matches are reported as `unmatched` so an alias can be added.
+ *   customer of its linked receivable; without one, to the customer whose bank alias matches the counterparty
+ *   ({@see CounterpartyMatcher}: exact, else prefix either way, longest alias wins). Deposits nobody matches are
+ *   reported as `unmatched` so an alias can be added.
  * - Maintenance periods run from `maintenance_since`, one per month or per year, up to the current period (and not past
  *   `maintenance_until`). A deposit lands in the period its date falls in, except that one arriving within
  *   {@see self::GRACE_DAYS} of a period's start first tops the previous period up to the TAXED fee if that one is
@@ -55,9 +55,6 @@ class CustomerCollections
 
     /** Assumed VAT when turning the untaxed fee into the amount the bank should show. */
     public const float TAX_RATE = 0.05;
-
-    /** Aliases shorter than this never prefix-match, so 「我」 does not swallow every counterparty. */
-    protected const int MIN_PREFIX_LENGTH = 2;
 
     /**
      * @return array{
@@ -97,9 +94,10 @@ class CustomerCollections
 
         $deposits = array_fill_keys($customers->pluck('id')->all(), []);
         $unmatched = [];
+        $matcher = new CounterpartyMatcher($customers);
 
         foreach ($lines as $line) {
-            $customerId = $this->customerIdFor($line, $customers);
+            $customerId = $this->customerIdFor($line, $matcher);
             $deposit = ['date' => $line->txn_date->toDateString(), 'amount' => (int) $line->deposit, 'counterparty' => filled($line->counterparty) ? trim($line->counterparty) : null];
 
             if ($customerId !== null) {
@@ -279,51 +277,14 @@ class CustomerCollections
 
     /**
      * The customer a deposit belongs to: the linked receivable's, else the best bank-alias match on the counterparty.
-     *
-     * @param  Collection<int, Customer>  $customers
      */
-    protected function customerIdFor(BankTransaction $line, $customers): ?int
+    protected function customerIdFor(BankTransaction $line, CounterpartyMatcher $matcher): ?int
     {
         if ($line->receivable?->customer_id !== null) {
             return $line->receivable->customer_id;
         }
 
-        $counterparty = filled($line->counterparty) ? trim($line->counterparty) : null;
-
-        if ($counterparty === null) {
-            return null;
-        }
-
-        $best = null;
-        $bestScore = 0;
-
-        foreach ($customers as $customer) {
-            foreach ($customer->bankAliases() as $alias) {
-                $score = self::aliasScore($alias, $counterparty);
-
-                if ($score > $bestScore) {
-                    [$best, $bestScore] = [$customer->id, $score];
-                }
-            }
-        }
-
-        return $best;
-    }
-
-    /**
-     * 0 for no match; an exact match outranks any prefix match, and a longer alias outranks a shorter one.
-     */
-    protected static function aliasScore(string $alias, string $counterparty): int
-    {
-        if ($alias === $counterparty) {
-            return 1_000 + mb_strlen($alias);
-        }
-
-        if (mb_strlen($alias) < self::MIN_PREFIX_LENGTH || mb_strlen($counterparty) < self::MIN_PREFIX_LENGTH) {
-            return 0;
-        }
-
-        return str_starts_with($counterparty, $alias) || str_starts_with($alias, $counterparty) ? min(mb_strlen($alias), mb_strlen($counterparty)) : 0;
+        return $matcher->match($line->counterparty)?->id;
     }
 
     /**

@@ -90,12 +90,19 @@
 | `confidence` | `high` / `low` |
 | `status` | `planned` / `invoiced` / `received` / `overdue` / `cancelled` |
 | `invoiced_on` / `received_on` | date, nullable |
+| `invoice_number` | string(32), nullable：統一發票號碼（`AB-12345678`）。「標記已開票」時可填；有 `invoiced_on` 卻沒有號碼表示發票到底開了沒還不確定，「請款進度」頁會標出來 |
 | `is_recurring` | 維運費這類每月固定款 |
 
 `overdue` 不存：由 `expected_on < today and status in (planned, invoiced)` 算出來，避免忘記更新。
 
+一筆入帳可以沖銷幾筆應收（期中款＋尾款一起匯）：`bank_transactions.receivable_id` 只連第一筆，其餘的 id 寫在該交易的 `notes`（「同筆入帳亦沖銷應收 #12、#13」）。沖銷邏輯在 `App\Domain\Finance\DepositMatcher`。
+
 ### `cost_baselines`
 常態月成本的版本紀錄：`effective_from`、`monthly_cost`（目前 229,666）、`breakdown`（JSONB：薪資 161,137、勞健保…）。推估時取最新一版。
+
+### `recurring_expenses`（固定支出）
+有自己節奏、有到期日的固定支出，補月成本基準「一個數字攤平」看不到的現金時點：`name`、`amount`（正數＝流出）、`cadence`（`monthly` / `bimonthly` / `quarterly` / `yearly`）、`due_day`（1–31，當月沒有那天就算月底）、`due_months`（JSON，非每月週期的到期月份，例如營業稅 `[1,3,5,7,9,11]`、營所稅 `[5]`；每月為 null）、`category`（`tax` / `insurance` / `payroll` / `rent` / `subscription` / `other`）、`in_baseline`（true＝金額已包含在 `cost_baselines.monthly_cost` 裡：只顯示在支出日曆，推估不重複扣）、`starts_on` / `ends_on`、`is_active`，加共通來源欄位。
+推估（`CashForecaster`）在每個 `as_of < due_on ≤ until` 的到期日扣掉 `in_baseline = false` 的金額（`assumptions.recurring_expenses`），收入展望另列 `fixed_outflow` 一層；一次性的仍用 `planned_cash_flows`。
 
 ### `cash_forecasts`（推估快照）
 `as_of`（基準日）、`opening_balance`、`rows`（JSONB：逐月「月份、流入、流出、餘額」）、`assumptions`（JSONB/text）、`min_balance`、`min_balance_month`、`year_end_balance`。
